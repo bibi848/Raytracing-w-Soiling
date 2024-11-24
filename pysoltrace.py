@@ -2300,7 +2300,7 @@ class PySolTrace:
 # -----------------------------------------------------------------------------------------------------------------------------
 
 def loaddll():
-    os.path.dirname(os.path.abspath(__file__))
+    cwd = os.path.dirname(os.path.abspath(__file__))
     pdll = CDLL(cwd + "/coretrace_api.dll")
 
 
