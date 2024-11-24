@@ -1473,7 +1473,7 @@ class PySolTrace:
         return 0
 
     def __load_dll(self):
-        cwd = os.getcwd()
+        cwd = os.path.dirname(os.path.abspath(__file__))
         if sys.platform == 'win32' or sys.platform == 'cygwin':
             ## loaded SolTrace library of exported functions
             pdll = CDLL(cwd + "/coretrace_api.dll")
@@ -2300,7 +2300,7 @@ class PySolTrace:
 # -----------------------------------------------------------------------------------------------------------------------------
 
 def loaddll():
-    cwd = os.getcwd()
+    os.path.dirname(os.path.abspath(__file__))
     pdll = CDLL(cwd + "/coretrace_api.dll")
 
 
