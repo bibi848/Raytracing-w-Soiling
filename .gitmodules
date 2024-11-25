@@ -1,0 +1,3 @@
+[submodule "HelioSoil"]
+	path = HelioSoil
+	url = https://github.com/cholette/HelioSoil.git
