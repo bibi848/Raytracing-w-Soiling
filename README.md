@@ -14,7 +14,7 @@ git commit -m "Updated HelioSoil submodule"
 
 When collaborators would like to clone this repository, you will need to initialize and update the submodule via:
 
-git clone --recurse-submodules https://github.com/<username>/Raytracing-Soiling.git
+git clone --recurse-submodules https://github.com/bibi848/Raytracing-w-Soiling.git
 
 
 
