@@ -11,24 +11,16 @@ import numpy as np
 import pysolar.solar as solar
 import pysolar.radiation as radiation
 from pysoltrace import PySolTrace, Point
-import matplotlib.pyplot as plt
-import matplotlib.ticker as mtick
 import datetime as dt
 from IPython.display import display, Latex
-import st_processing_functions
-import ipywidgets as widgets
 from IPython.display import display
-from scipy.interpolate import interp1d
-import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 from scipy.optimize import bisect
 from datetime import datetime, timedelta
-import pytz
-import calendar
-from pvlib import irradiance
-import pvlib
+import time
 
+timer_start = time.time()
 def panel_normal(tilt_rad): # returns the normal vector of a panel with a certain tilt
     return np.array([np.sin(tilt_rad), np.cos(tilt_rad), 0])
 
@@ -136,7 +128,7 @@ for i, date in enumerate(datetime_list):
         r_aim = np.c_[-panel_positions,(receiver_height-mirrors_height)*np.ones_like(panel_positions)]                                       
         theta_aim = np.arctan(r_aim[:,0]/r_aim[:,1])
         tilt_deg = 180/np.pi*(theta_trav+theta_aim)/2 
-        tilt_rad = np.deg2rad
+        tilt_rad = np.deg2rad(tilt_deg)
  
         sun_vector = np.transpose(np.array([np.cos(azimuth_rad)*np.cos(elevation_rad), 
                                             np.sin(azimuth_rad)*np.cos(elevation_rad), np.sin(elevation_rad)]))
@@ -405,8 +397,8 @@ for i, date in enumerate(datetime_list):
         mirrors_abs = df[(df['stage']==3) & (df['element'] < 0)]['number'].unique().shape[0]     # Reflectance loss mirrors
         mirrors_refl = df[(df['stage'] == 3) & (df['element'] > 0)]['number'].unique().shape[0]  # Rays may or may not hit the stage 3
         mirrors_hits = df[(df['stage']==3) & (df['element'] != 0)]['number'].unique().shape[0]   # Can be reflected, absorbed, or miss,
-                                                                                                 # going in the gap btw mirrors
-        rays_gaps = cover_miss - mirrors_hits                # Rays in the space btw mirrors
+                                                                                                 # going in the gap between mirrors
+        rays_gaps = cover_miss - mirrors_hits                # Rays in the space between mirrors
         rays_stage3 = mirrors_abs + mirrors_refl + rays_gaps  
 
         # Receiver analysis
@@ -422,7 +414,48 @@ for i, date in enumerate(datetime_list):
 
         # Efficiency
         ppr_corrected = total_width * panel_length * np.cos(theta_trav) * PT.dni / (number_hits-rays_gaps)
-        
-    break
 
+        if (mirrors_hits) != 0:
+            eta_opt_corrected = receiver_abs * ppr_corrected / (PT.dni * A_aperture)
+        else: eta_opt_corrected = 0
+        
+        E_sun = A_aperture * solar_radiation       # overall amount of energy that hits the total aperture area
+        thermal_energy = eta_opt_corrected * E_sun # thermal energy at the receiver
+        E_sun_real = E_sun * eta_opt_corrected
+
+    else:
+        day_night = "night"
+        eta_opt_corrected = 0
+        SR_cumulated = a_loss #during nigth hours there is no increase in dust (it keeps constant)
+        reflectivity_corrected = reflectivity * (1-SR_cumulated)
+        # theta_i = np.zeros_like(panel_positions) 
+        # to model the vertical position of panels during night hours
+        # NO DUST IS DEPOSITED over the mirrors' surface    
+        theta_i = np.full_like(panel_positions, np.nan)  
+        g_factor = np.zeros_like(panel_positions) 
+        tilt = 90 * np.ones_like(panel_positions)
+        solar_clear_sky_radiation = 0
+        E_sun = 0
+        E_sun_real = 0
+        thermal_energy = 0
+    
+    a_loss = SR_cumulated # to update the value of a_loss for the next iteration
+    eta_opt_zero = 0.686
+    IAM = eta_opt_corrected/eta_opt_zero   
+    month = date.month
+    day = date.day
+    hour = date.hour
+    incidence_angle = theta_i 
+    tilt_angle = tilt
+    rho_avg_field = np.mean(reflectivity_corrected) # 1 value for the whole plant
+    
+    lookup_table_soiled.loc[lookup_table_loc] = [date, azimuth_deg, elevation_deg, eta_opt_corrected, IAM, 
+                                             day_night, month, day, hour, rho_avg_field, solar_clear_sky_radiation, 
+                                             E_sun, E_sun_real, thermal_energy] + list(incidence_angle) + list(tilt_angle) + list(reflectivity_corrected) + list(a_loss) + list(g_factor)
+    lookup_table_loc += 1
+
+print(lookup_table_soiled)
+timer_end = time.time()
+
+print(timer_end - timer_start)
 
