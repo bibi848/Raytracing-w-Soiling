@@ -19,10 +19,16 @@ import numpy as np
 from scipy.optimize import bisect
 from datetime import datetime, timedelta
 import time
+import os
 
 timer_start = time.time()
 def panel_normal(tilt_rad): # returns the normal vector of a panel with a certain tilt
     return np.array([np.sin(tilt_rad), np.cos(tilt_rad), 0])
+
+# File Location for Saving
+folder = os.path.dirname(os.path.abspath(__file__)) + "/CSV Result Files"
+file_name = 'Commerical Tr 4 Stages Example.csv'
+file_path = os.path.join(folder, file_name)
 
 # Location: Woomera
 lat, lon = -31.2,136.816667
@@ -427,14 +433,14 @@ for i, date in enumerate(datetime_list):
         day_night = "night"
         eta_opt_corrected = 0
         SR_cumulated = a_loss #during nigth hours there is no increase in dust (it keeps constant)
-        reflectivity_corrected = reflectivity * (1-SR_cumulated)
+        reflectivity_actual = reflectivity * (1-SR_cumulated)
         # theta_i = np.zeros_like(panel_positions) 
         # to model the vertical position of panels during night hours
         # NO DUST IS DEPOSITED over the mirrors' surface    
-        theta_i = np.full_like(panel_positions, np.nan)  
+        incidence_angle_rad = np.full_like(panel_positions, np.nan)  
         g_factor = np.zeros_like(panel_positions) 
-        tilt = 90 * np.ones_like(panel_positions)
-        solar_clear_sky_radiation = 0
+        tilt_deg = 90 * np.ones_like(panel_positions)
+        solar_radiation = 0
         E_sun = 0
         E_sun_real = 0
         thermal_energy = 0
@@ -445,13 +451,11 @@ for i, date in enumerate(datetime_list):
     month = date.month
     day = date.day
     hour = date.hour
-    incidence_angle = theta_i 
-    tilt_angle = tilt
-    rho_avg_field = np.mean(reflectivity_corrected) # 1 value for the whole plant
+    rho_avg_field = np.mean(reflectivity_actual) # 1 value for the whole plant 
     
     lookup_table_soiled.loc[lookup_table_loc] = [date, azimuth_deg, elevation_deg, eta_opt_corrected, IAM, 
-                                             day_night, month, day, hour, rho_avg_field, solar_clear_sky_radiation, 
-                                             E_sun, E_sun_real, thermal_energy] + list(incidence_angle) + list(tilt_angle) + list(reflectivity_corrected) + list(a_loss) + list(g_factor)
+                                             day_night, month, day, hour, rho_avg_field, solar_radiation, 
+                                             E_sun, E_sun_real, thermal_energy] + list(np.rad2deg(incidence_angle_rad)) + list(tilt_deg) + list(reflectivity_actual) + list(a_loss) + list(g_factor)
     lookup_table_loc += 1
 
 print(lookup_table_soiled)
@@ -459,3 +463,4 @@ timer_end = time.time()
 
 print(timer_end - timer_start)
 
+lookup_table_soiled.to_csv(file_path, index=False)
