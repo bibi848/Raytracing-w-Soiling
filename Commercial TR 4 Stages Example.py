@@ -11,12 +11,9 @@ import numpy as np
 import pysolar.solar as solar
 import pysolar.radiation as radiation
 from pysoltrace import PySolTrace, Point
+from optical_geometrical_setup import stg_surface
 import datetime as dt
-from IPython.display import display, Latex
-from IPython.display import display
 import pandas as pd
-import numpy as np
-from scipy.optimize import bisect
 from datetime import datetime, timedelta
 import time
 import os
@@ -37,7 +34,7 @@ timezoneOffset = dt.timedelta(hours = 9.5)
 # Time Duration: Measuring across a whole year
 # It starts on the 1st Jan 2023, and ends on the 1st Jan 2024, with a date for every hour of the year.
 start_date = datetime(2023, 1, 1,hour=0,minute=0,second=0,tzinfo=dt.timezone(timezoneOffset)) # Define the start date
-end_date = start_date + timedelta(days=365) # Calculate the end date 
+end_date = start_date + timedelta(days=9) # Calculate the end date 
 datetime_list = []                          # Create a list of datetime objects
 current_date = start_date                   # Loop to generate datetime objects from start_date to end_date
 while current_date <= end_date:
@@ -48,7 +45,7 @@ while current_date <= end_date:
 number_hits = 1e3  # 1 million rays 
 sunshape_flag = False
 sfcerr_flag = False
-cleaning_frequency = 14 # number of days between each clean
+cleaning_frequency = 3 # number of days between each clean
 
 # Geometry of Panels
 total_width = 7.5    # [m]
@@ -159,58 +156,24 @@ for i, date in enumerate(datetime_list):
 
         # OPTICAL PROPERTIES
         # Fictitious surface, Stage 1
-        optics_fictitious = PT.add_optic("fictitious surface")
-        optics_fictitious.front.reflectivity = 0.0
-        optics_fictitious.back.reflectivity = 0.0
-        optics_fictitious.front.transmissivity = 1.0
-        optics_fictitious.back.transmissivity = 1.0
+        optics_fictitious = stg_surface(PT, "Fictitious Surface", 0.0, 0.0, 1.0, 1.0, slope_error, specularity_error)
         optics_fictitious.front.refraction_real = 1.0
         optics_fictitious.back.refraction_real = 1.0 
-        optics_fictitious.front.slope_error = slope_error
-        optics_fictitious.front.specularity_error = specularity_error
-        optics_fictitious.back.slope_error = slope_error
-        optics_fictitious.back.specularity_error = specularity_error
 
         # Cover, Stage 2
-        optics_secondary = PT.add_optic("cover")
-        optics_secondary.front.reflectivity = 1.0 
-        optics_secondary.front.transmissivity = 0.0
-        optics_secondary.back.reflectivity = 1.0 
-        optics_secondary.back.transmissivity = 0.0
-        optics_secondary.front.slope_error = slope_error
-        optics_secondary.front.specularity_error = specularity_error
-        optics_secondary.back.slope_error = slope_error
-        optics_secondary.back.specularity_error = specularity_error
+        optics_secondary = stg_surface(PT, "Cover", 1.0, 1.0, 0.0, 0.0, slope_error, specularity_error)
 
         # Mirrors, Stage 3
         optics_helios = []
         for p, x in enumerate(panel_positions):
-            optics_p = PT.add_optic(f"Heliostat_{p}") # Creating a new element called "Heliostat_x"
-            optics_p.front.reflectivity = reflectivity_actual[p] 
-            optics_p.front.transmissivity = 0.0
-            optics_p.front.slope_error = slope_error
-            optics_p.front.specularity_error = specularity_error
-            optics_p.back.reflectivity = 0.0
-            optics_p.back.transmissivity = 0.0
+            optics_p = stg_surface(PT, f"Heliostat_{p}", reflectivity_actual[p], 0.0, 0.0, 0.0, slope_error, specularity_error)
             optics_helios.append(optics_p)
         
         # Receiver, Stage 4
-        optics_receiver = PT.add_optic("Tube")
-        optics_receiver.front.reflectivity = reflectivity_rec # Absorbvity of receiver
-        optics_receiver.back.reflectivity = reflectivity_rec
-        optics_receiver.front.transmissivity = 0.0
-        optics_receiver.back.transmissivity = 0.0
+        optics_receiver = stg_surface(PT, "Tube", reflectivity_rec, reflectivity_rec, 0.0, 0.0)
 
         # Secondary reflector, Stage 4
-        optics_secondary = PT.add_optic("Secondary")
-        optics_secondary.front.reflectivity = 0.9 
-        optics_secondary.front.transmissivity = 0.0
-        optics_secondary.back.reflectivity = reflectivity[0] 
-        optics_secondary.back.transmissivity = 0.0
-        optics_secondary.front.slope_error = slope_error
-        optics_secondary.front.specularity_error = specularity_error
-        optics_secondary.back.slope_error = slope_error
-        optics_secondary.back.specularity_error = specularity_error
+        optics_secondary = stg_surface(PT, "Secondary", 0.9, reflectivity[0], 0.0, 0.0, slope_error, specularity_error)
 
         # GEOMETRY
         # Fictitious Surface, Stage 1
