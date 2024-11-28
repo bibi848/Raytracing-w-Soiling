@@ -55,10 +55,8 @@ panel_length = 12.18 # [m]
 mirrors_height = 0.5 # [m]
 panel_positions = np.arange(-3.5, 3.75, panel_width + spacing) # Question?
 N_panels = len(panel_positions)                                 # Number of panels, 11
-panel_optics = [f"Heliostat_{ii}" for ii in range(N_panels)]    # Heliostat_0, Heliostat_1, ... , Heliostat_10. 
-                                                               # Must match the SolTrace Optics Tab.
 reflectivity = [0.95] * N_panels
-reflectivity_rec = 0.06 # Absorbtion of 94%.
+reflectivity_rec = 0.06 # Absorption of 94%.
 slope_error = 0.1       # [mrad]
 specularity_error = 0.1 # [mrad]
 
@@ -84,8 +82,6 @@ lookup_table_soiled = pd.DataFrame(columns = lookup_table_field)
 lookup_table_loc = 0
 a_loss = np.zeros(len(panel_positions))
 
-# Things I believe can be outside of loop (needs comments)
-
 # Incidence angle Evaluation
 towerToMirror = np.array([np.zeros(len(panel_positions)),panel_positions,                    # Relative postion of tower from mirror.
                           np.ones((len(panel_positions)))*(receiver_height-mirrors_height)]) # Left-handed reference system.
@@ -101,7 +97,9 @@ A_layout = panel_length * (panel_width*N_panels + spacing*(N_panels-1)) # Gross 
 A_aperture = len(panel_positions) * panel_width * panel_length          # Mirrors' surface
 
 
-# Comment needed here
+# Main loop, where for each hour of the days in the datetime_list, the position of the sun is found, and the angle of tilt
+# of the panels. The cumulative soiling is applied to the panels which then are put through pysoltrace to find the resulting
+# efficiency of the plant. 
 for i, date in enumerate(datetime_list):
 
     # Finding the position of the sun in the sky
@@ -119,18 +117,20 @@ for i, date in enumerate(datetime_list):
     if elevation_deg > 0:
         day_night = "day"
        
-        # Calculate the DNI from the date and elevation, and the sun position vector (Sz, Sx, Sy). 
-        # The first two elements of the sun position vector are then normalised. 
+        # Calculate the DNI from the date and elevation, and the sun position vector (Sz, Sy, Sx).
+        # The sun_position vector is calculated in the aiming strategy document, along with the rest of the 
+        # maths presented below.
         solar_radiation = radiation.get_radiation_direct(date, elevation_deg) 
-        sun_position = np.array([-np.sin(azimuth_rad)*np.sin(zenith_rad), np.cos(zenith_rad), np.cos(azimuth_rad)*np.sin(zenith_rad)])
+        sun_position = np.array([np.sin(azimuth_rad)*np.sin(zenith_rad), np.cos(zenith_rad), np.cos(azimuth_rad)*np.sin(zenith_rad)])
         sn = sun_position[0:2]/np.linalg.norm(sun_position[0:2]) # sn is the NORMALISED sun position vector
 
         # Work needed here:
         # The angle of projection of the sun vector to the transverse plane
-        theta_trav = np.arctan(sn[0]/sn[1]) 
+        theta_T = np.arctan(sn[0]/sn[1]) 
+        theta_L = np.arctan(np.cos(azimuth_rad) * np.tan(zenith_rad))     
         r_aim = np.c_[-panel_positions,(receiver_height-mirrors_height)*np.ones_like(panel_positions)]                                       
         theta_aim = np.arctan(r_aim[:,0]/r_aim[:,1])
-        tilt_deg = 180/np.pi*(theta_trav+theta_aim)/2 
+        tilt_deg = 180/np.pi*(theta_T+theta_aim)/2 
         tilt_rad = np.deg2rad(tilt_deg)
  
         sun_vector = np.transpose(np.array([np.cos(azimuth_rad)*np.cos(elevation_rad), 
@@ -143,7 +143,6 @@ for i, date in enumerate(datetime_list):
         SR_cumulated = SR_hourly + a_loss                 # Taking into account the buildup of dust already present.
         reflectivity_actual = reflectivity * (1-(SR_cumulated * g_factor))
 
-        theta_L = np.arctan(np.cos(azimuth_rad) * np.tan(zenith_rad))     # ???
         shift_x_axis = (stg1_height-mirrors_height)/np.tan(elevation_rad) # east-west axis [x-axis] --> negative shift (west is positive)
         shift_z_axis = (stg1_height-mirrors_height)*np.tan(theta_L)       # north-south [z-axis] ) --> positive shift (north is positive)
 
@@ -382,7 +381,7 @@ for i, date in enumerate(datetime_list):
         avg_cos_beta = np.mean(np.cos(tilt_rad))
 
         # Efficiency
-        ppr_corrected = total_width * panel_length * np.cos(theta_trav) * PT.dni / (number_hits-rays_gaps)
+        ppr_corrected = total_width * panel_length * np.cos(theta_T) * PT.dni / (number_hits-rays_gaps)
 
         if (mirrors_hits) != 0:
             eta_opt_corrected = receiver_abs * ppr_corrected / (PT.dni * A_aperture)
