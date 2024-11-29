@@ -34,7 +34,7 @@ timezoneOffset = dt.timedelta(hours = 9.5)
 # Time Duration: Measuring across a whole year
 # It starts on the 1st Jan 2023, and ends on the 1st Jan 2024, with a date for every hour of the year.
 start_date = datetime(2023, 1, 1,hour=0,minute=0,second=0,tzinfo=dt.timezone(timezoneOffset)) # Define the start date
-end_date = start_date + timedelta(days=9) # Calculate the end date 
+end_date = start_date + timedelta(days=365) # Calculate the end date 
 datetime_list = []                          # Create a list of datetime objects
 current_date = start_date                   # Loop to generate datetime objects from start_date to end_date
 while current_date <= end_date:
@@ -43,8 +43,8 @@ while current_date <= end_date:
 
 # Simulation Parameters
 number_hits = 1e3  # 1 million rays 
-sunshape_flag = False
-sfcerr_flag = False
+sunshape_flag = True
+sfcerr_flag = True
 cleaning_frequency = 3 # number of days between each clean
 
 # Geometry of Panels
@@ -53,7 +53,7 @@ spacing = 0.2        # [m]
 panel_width = 0.5    # [m]
 panel_length = 12.18 # [m]
 mirrors_height = 0.5 # [m]
-panel_positions = np.arange(-3.5, 3.75, panel_width + spacing) # Question?
+panel_positions = np.arange(-3.5, 3.75, panel_width + spacing)
 N_panels = len(panel_positions)                                 # Number of panels, 11
 reflectivity = [0.95] * N_panels
 reflectivity_rec = 0.06 # Absorption of 94%.
@@ -97,6 +97,10 @@ A_layout = panel_length * (panel_width*N_panels + spacing*(N_panels-1)) # Gross 
 A_aperture = len(panel_positions) * panel_width * panel_length          # Mirrors' surface
 
 
+r_aim = np.c_[-panel_positions,(receiver_height-mirrors_height)*np.ones_like(panel_positions)]
+theta_aim = np.arctan(r_aim[:,0]/r_aim[:,1])
+
+
 # Main loop, where for each hour of the days in the datetime_list, the position of the sun is found, and the angle of tilt
 # of the panels. The cumulative soiling is applied to the panels which then are put through pysoltrace to find the resulting
 # efficiency of the plant. 
@@ -107,7 +111,6 @@ for i, date in enumerate(datetime_list):
     azimuth_deg = solar.get_azimuth(lat,lon,date) 
     zenith_deg = 90 - elevation_deg  
     elevation_rad, azimuth_rad, zenith_rad = (np.deg2rad(x) for x in [elevation_deg, azimuth_deg, zenith_deg])
-    incidence_angles = []
 
     # The absorbtion loss is put back to 0 at the start of each month, 
     # or after the desired cleaning frequency.
@@ -121,17 +124,15 @@ for i, date in enumerate(datetime_list):
         # The sun_position vector is calculated in the aiming strategy document, along with the rest of the 
         # maths presented below.
         solar_radiation = radiation.get_radiation_direct(date, elevation_deg) 
-        sun_position = np.array([np.sin(azimuth_rad)*np.sin(zenith_rad), np.cos(zenith_rad), np.cos(azimuth_rad)*np.sin(zenith_rad)])
+        sun_position = np.array([-np.sin(azimuth_rad)*np.sin(zenith_rad), np.cos(zenith_rad), np.cos(azimuth_rad)*np.sin(zenith_rad)])
         sn = sun_position[0:2]/np.linalg.norm(sun_position[0:2]) # sn is the NORMALISED sun position vector
 
-        # Work needed here:
-        # The angle of projection of the sun vector to the transverse plane
+        # Both the longitudinal and transversal angles of the sun are calculated,, which then are used to find the tilt
+        # angles for each of the panels. 
         theta_T = np.arctan(sn[0]/sn[1]) 
-        theta_L = np.arctan(np.cos(azimuth_rad) * np.tan(zenith_rad))     
-        r_aim = np.c_[-panel_positions,(receiver_height-mirrors_height)*np.ones_like(panel_positions)]                                       
-        theta_aim = np.arctan(r_aim[:,0]/r_aim[:,1])
-        tilt_deg = 180/np.pi*(theta_T+theta_aim)/2 
-        tilt_rad = np.deg2rad(tilt_deg)
+        theta_L = np.arctan(np.cos(azimuth_rad) * np.tan(zenith_rad))                                           
+        tilt_rad = (theta_T+theta_aim)/2 
+        tilt_deg = np.rad2deg(tilt_rad)
  
         sun_vector = np.transpose(np.array([np.cos(azimuth_rad)*np.cos(elevation_rad), 
                                             np.sin(azimuth_rad)*np.cos(elevation_rad), np.sin(elevation_rad)]))
@@ -149,7 +150,7 @@ for i, date in enumerate(datetime_list):
         # Run Soltrace and add the sun
         PT = PySolTrace()
         sun = PT.add_sun()
-        sun.position.x = 1000*sun_position[0] # Can maybe optimise this
+        sun.position.x = 1000*sun_position[0] 
         sun.position.y = 1000*sun_position[1]
         sun.position.z = 1000*sun_position[2]
 
@@ -285,7 +286,6 @@ for i, date in enumerate(datetime_list):
             el3.optic = optics_helios[i]
             n = panel_normal(tilt_rad[i]) 
             hpos = np.array([panel_positions[i], mirrors_height, 0])
-            aim = hpos + 1000*n 
             el3.position = Point(*hpos)          
 
             hpos = np.array([0.000001+panel_positions[i],0,0]) 
