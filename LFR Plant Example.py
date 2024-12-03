@@ -1,9 +1,9 @@
-# This script attempts to visually convey a LFR plant at a given date and time.
-# It models 11 LFR panels, lined up along the X (West to East) Axis, with a variable sun position, which is then 
-# plotted in an interactive 3D panel. 
-# XYZ: X, East. Y, North. Z, Up.
-# Further information for this script can be found on Aiming Strategy for Linear Fresnel Reflectors Document, and the 
-# SolTrace API documentation.
+"""
+This script attempts to visually convey a LFR plant at a given date and time.
+It models 11 LFR panels, lined up along the X (West to East) Axis, with a variable sun position, which is then plotted in an interactive 3D panel. 
+XYZ: X, East. Y, North. Z, Up.
+Further information for this script can be found on Aiming Strategy for Linear Fresnel Reflectors Document, and the SolTrace API documentation.
+"""
 
 # FUNCTIONS
 import sys
@@ -15,9 +15,17 @@ import pysolar.solar as solar
 from pysoltrace import PySolTrace, Point
 import datetime as dt
 from datetime import datetime
+
 from raytracing_soiling_functions import calculate_theta_aim
 from raytracing_soiling_functions import calculate_tilt
 from raytracing_soiling_functions import calculate_panel_normal
+
+from optical_geometrical_setup import op_fictitious_surface
+from optical_geometrical_setup import op_cover_surface
+from optical_geometrical_setup import op_heliostat_surface
+from optical_geometrical_setup import op_receiver_surface
+from optical_geometrical_setup import op_secondaryReflector_surface
+from optical_geometrical_setup import trapezoidal_secondary_reflector
 
 # Date and Location
 # Location is Woomera and the date is set as 01/04/2023 at 11:00. This can be changed to any date.
@@ -38,6 +46,12 @@ panel_spacing = 0.2      # [m]
 # Panel Positions describes the x coordinate for each of the mirrors, ranging from -3.5 [m] to 3.75 [m],
 # with a panel spacing as chosen above. 
 panel_positions = np.arange(-3.5, 3.75, panel_width + panel_spacing) 
+slope_error = 0.1        # [mrad]
+specularity_error = 0.1  # [mrad]
+
+stg0_height = receiver_height + 1
+stg0_length = panel_length
+stg0_width = panel_width * len(panel_positions) + panel_spacing * (len(panel_positions) - 1)
 
 # Create API class instance
 PT = PySolTrace()
@@ -64,12 +78,46 @@ sn = sun_position[0:3]/np.linalg.norm(sun_position[0:3])
 theta_T = np.arctan(sn[0]/sn[2])
 theta_L = np.arctan(sn[1]/sn[2])
 
+"""
+Order of Stages:
+0, Fictitious Surface: This is so that the sun's rays first pass through a surface before interacting with anything else, ensures the shading effect
+                       of the receiver and secondary reflector are taken into account.
+1, Cover: This stage contains the 'casing' for the receiver and secondary reflector. It ensures that its shading effect is taken into account.
+2, Heliostats: After being shaded by the Cover stage, the light will hit the heliostats. These are angled to optimise the reflectance of the sun into the receiver.
+3, Receiver & Secondary Reflector: Any rays that miss the receiver will strike the secondary reflector to hopefully increase the incident radiation on the receiver.
+"""
+
+# Stage 0, Fictitious Surface
+stg0 = PT.add_stage()
+stg0.is_multihit = True
+stg0.is_virtual = False
+stg0.name = 'Stage 0: Fictitious Surface'
+stg0.position = Point(0,0,0)
+optics_fictitious = op_fictitious_surface(PT, slope_error, specularity_error)
+el0 = stg0.add_element()
+el0.position = Point(2,2,stg0_height)
+el0.aim = Point(0,0,1000)
+el0.surface_flat()
+el0.aperture_rectangle(stg0_width, stg0_length)
+el0.optic = optics_fictitious
+el0.interaction = 1
+
+# Stage 1, Cover
+stg1 = PT.add_stage()
+stg1.is_multihit = True
+stg1.is_tracethrough = True
+stg1.name = 'Stage 1: Cover'
+stg1.position = Point(0,0,0)
+optics_cover = op_cover_surface(PT, slope_error, specularity_error)
+el1 = trapezoidal_secondary_reflector(stg1, optics_cover, receiver_height, receiver_length)
+
 # Setting up the Heliostats
-st1 = PT.add_stage()
-st1.position = Point(0,0,0)
+stg2 = PT.add_stage()
+stg2.is_multihit = True
+stg2.name = 'Stage 2: Heliostats'
+stg2.position = Point(0,0,0)
 for p in range(len(panel_positions)):
-    optics_heliostat_p = PT.add_optic("Heliostat_{p}")
-    optics_heliostat_p.front.reflectivity = 1.0
+    optics_heliostat_p = op_heliostat_surface(PT, slope_error, specularity_error, 1, p)
 
     heliostat_position = [panel_positions[p], 0, panel_height]
     # From the relative positions of the panel to the receiver, the panel's tilt and normal are calculated.
@@ -77,30 +125,34 @@ for p in range(len(panel_positions)):
     tilt = calculate_tilt(theta_T, theta_aim)
     panel_normal = calculate_panel_normal(tilt)
 
-    el = st1.add_element()
-    el.position = Point(*heliostat_position)
+    el2 = stg2.add_element()
+    el2.position = Point(*heliostat_position)
     aim = heliostat_position + 1000*panel_normal
-    el.aim = Point(*aim)
-    el.optic = optics_heliostat_p
-    el.surface_flat()
-    el.aperture_rectangle(panel_width, panel_length)
+    el2.aim = Point(*aim)
+    el2.optic = optics_heliostat_p
+    el2.surface_flat()
+    el2.aperture_rectangle(panel_width, panel_length)
 
-# Receiver
-optics_receiver = PT.add_optic("Receiver")
-optics_receiver.front.reflectivity = 0.0
+# Receiver & Secondary Reflector
+stg3 = PT.add_stage()
+stg3.is_multihit = True
+stg3.name = 'Stage 3: Receiver & Secondary Reflector'
+stg3.position = Point(0,0,0)
+optics_receiver = op_receiver_surface(PT)
 
-sta = PT.add_stage()
-ela = sta.add_element()
-ela.position = Point(*receiver_position)
-ela.aim = Point(0,0,0)
-ela.optic = optics_receiver
-ela.surface_cylindrical(receiver_diameter/2)
-ela.aperture_singleax_curve(0, 0, receiver_length) # (inner coordinate of revolved section, outer coordinate of revolved section, 
-                                                   #  length of revolved section along axis of revolution)
+el3 = stg3.add_element()
+el3.position = Point(*receiver_position)
+el3.aim = Point(0,0,0)
+el3.optic = optics_receiver
+el3.surface_cylindrical(receiver_diameter/2)
+el3.aperture_singleax_curve(0, 0, receiver_length) # (inner coordinate of revolved section, outer coordinate of revolved section, 
+                                                #  length of revolved section along axis of revolution)
+optics_secondary = op_secondaryReflector_surface(PT, slope_error, specularity_error)
+el3 = trapezoidal_secondary_reflector(stg3, optics_secondary, receiver_height, receiver_length)
 
 
 # Simulation Parameters
-PT.num_ray_hits = 1e6
+PT.num_ray_hits = 1e5
 PT.max_rays_traced = PT.num_ray_hits*100
 PT.is_sunshape = True
 PT.is_surface_errors = True
