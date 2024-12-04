@@ -19,6 +19,7 @@ from datetime import datetime
 from raytracing_soiling_functions import calculate_theta_aim
 from raytracing_soiling_functions import calculate_tilt
 from raytracing_soiling_functions import calculate_panel_normal
+from raytracing_soiling_functions import find_normal
 
 from optical_geometrical_setup import op_fictitious_surface
 from optical_geometrical_setup import op_cover_surface
@@ -93,12 +94,14 @@ stg0.is_multihit = True
 stg0.is_virtual = False
 stg0.name = 'Stage 0: Fictitious Surface'
 stg0.position = Point(0,0,0)
+
 optics_fictitious = op_fictitious_surface(PT, slope_error, specularity_error)
 el0 = stg0.add_element()
-el0.position = Point(2,2,stg0_height)
-el0.aim = Point(0,0,1000)
+el0.position = Point(*(7*sun_position))
+aim = sun_position + 1000*find_normal(sun_position, [0,0,0])
+el0.aim = Point(*aim)
 el0.surface_flat()
-el0.aperture_rectangle(stg0_width, stg0_length)
+el0.aperture_rectangle(14,14)
 el0.optic = optics_fictitious
 el0.interaction = 1
 

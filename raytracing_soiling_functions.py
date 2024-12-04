@@ -19,3 +19,10 @@ def calculate_tilt(theta_transversal, theta_aim):
 def calculate_panel_normal(tilt_rad): 
     return np.array([np.sin(tilt_rad), 0, np.cos(tilt_rad)])
 
+# This finds the normal vector between two points
+def find_normal(input_point, output_point):
+    
+    normal = np.array([output_point[0] - input_point[0],
+                       output_point[1] - input_point[1],
+                       output_point[2] - input_point[2]])
+    return normal
