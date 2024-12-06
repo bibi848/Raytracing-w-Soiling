@@ -39,7 +39,7 @@ def op_cover_surface(PT, slope_error, specularity_error):
     optics_secondary = PT.add_optic("Cover")
     optics_secondary.front.reflectivity = 1.0 
     optics_secondary.front.transmissivity = 0.0
-    optics_secondary.back.reflectivity = 1.0 
+    optics_secondary.back.reflectivity = 0.0 
     optics_secondary.back.transmissivity = 0.0
     optics_secondary.front.slope_error = slope_error
     optics_secondary.front.specularity_error = specularity_error
@@ -78,9 +78,6 @@ def op_secondaryReflector_surface(PT, slope_error, specularity_error):
     return optics_secondary
 
 def trapezoidal_secondary_reflector(stg, optics, receiver_height, receiver_length):
-    # spos1 = [-0.15,receiver_height-0.06,0] 
-    # spos2 = [0.15,receiver_height-0.06,0] 
-    # spos3 = [0,receiver_height+0.04,0]
 
     spos1 = [-0.15, 0, receiver_height-0.06]
     spos2 = [0.15, 0, receiver_height-0.06]
