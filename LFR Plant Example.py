@@ -63,7 +63,7 @@ specularity_error = 0.1  # [mrad]
 stg1_height = receiver_height
 stg1_length = panel_length 
 stg1_width = panel_width * len(panel_positions) + panel_spacing * (len(panel_positions) - 1) 
-distance_multiplier = 11 # Scaling factor which pushes the fictitious surface away from the solar field
+distance_multiplier = 500 # Scaling factor which pushes the fictitious surface away from the solar field
 field_coords = [[-3.5, 6], [-3.5, -6], [3.75, 6], [3.75, -6]]
 
 # Create API class instance
@@ -197,8 +197,8 @@ mirrors_refl = df[(df['stage'] == 3) & (df['element'] > 0)]['number'].unique().s
 mirrors_hits = df[(df['stage']==3) & (df['element'] != 0)]['number'].unique().shape[0]   # Number of rays hitting stage 3
 rays_gaps = cover_miss - mirrors_hits # Rays in the space between mirrors
 
-receiver_abs = df[(df['stage'] == 4) & (df['element'] < 0)].shape[0]  # Number of rays hitting receiver from mirrors
-receiver_tot = df[(df['stage'] == 4) & (df['element'] != 0)].shape[0] 
+receiver_abs = df[(df['stage'] == 4) & (df['element'] == -1)].shape[0]  # Number of rays hitting receiver from mirrors
+receiver_tot = df[(df['stage'] == 4) & (df['element'] != 0)].shape[0] # Number of rays 
 
 # Optical efficiency and power per ray
 A_aperture = len(panel_positions) * panel_width * panel_length # Mirrored surface
@@ -215,16 +215,21 @@ else:
 E_sun = A_aperture * solar_radiation        # Overall amount of energy that hits the total aperture area
 E_sun_real = E_sun * eta_opt_corrected 
 eta_opt_zero = 0.686
+eta_opt_rays = receiver_abs / mirrors_hits
 IAM = eta_opt_corrected/eta_opt_zero
 
 # Results
 print()
 print('The sun is at an azimuth of', round(azimuth_deg), 'and a zenith of', round(zenith_deg))
 print("Number of rays traced: {:d}".format(PT.raydata.index.size))
-print('Number of rays hitting')
+print()
+print('Number of rays hitting,')
 print('Fictitious surface:', fictitious_df)
 print('Cover:', cover_df)
 print('Mirrors:', mirrors_hits)
 print('Receiver:', receiver_tot)
 print()
-print('Plant Efficiency', eta_opt_corrected)
+print(f'Rays ratio optical efficiency: {eta_opt_rays:.2f}%')
+print(f'Corrected power per ray: {ppr_corrected:.2f} W/m2')
+print(f'Corrected optical efficiency: {eta_opt_corrected:.2f}%')
+print(f'Corrected IAM: {IAM:.2f}%')
