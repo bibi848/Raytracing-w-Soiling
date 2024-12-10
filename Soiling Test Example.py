@@ -1,4 +1,3 @@
-
 """
 Soiling Model Testing. 
 This script attempts to familirise the user with the importing and manipulation of the HelioSoil soiling models, 
@@ -15,10 +14,9 @@ current_directory = os.path.dirname(current_script_path)  # Directory containing
 heliosoil_path = os.path.join(current_directory, "HelioSoil")
 sys.path.append(heliosoil_path)
 
+# Import modules
 import numpy as np
 import matplotlib.pyplot as plt
-
-# Import modules
 import soiling_model.base_models as smb
 
 # Define file paths
@@ -33,47 +31,41 @@ sim_data = smb.simulation_inputs(file_weather, dust_type="PM10", verbose=False)
 physical_model = smb.physical_base()
 physical_model.import_site_data_and_constants(file_params)
 
-# Initialize and populate the dust instance
-my_dust = smb.dust()
-my_dust.D[0] = np.array([1.0, 2.0, 5.0, 10.0])  # Convert to NumPy array for compatibility
-my_dust.rho[0] = 2600                           # Density of dust particles in kg/m³
-my_dust.pdfN[0] = np.array([100, 80, 50, 10])   # Convert to NumPy array
-
-# Extract parameters from sim_data
-wind_speed = sim_data.wind_speed[0]  # Wind speed for the first simulation file
-air_temp = sim_data.air_temp[0]      # Air temperature for the first simulation file
-
-# Call the deposition_velocity method
-results = physical_model.deposition_velocity(
-    dust=my_dust,
-    wind_speed=wind_speed,
-    air_temp=air_temp,
-    hrz0=physical_model.hrz0  # Use hrz0 defined in the parameters file
-)
-
-# Generate dummy tilt data: 2 heliostats, 8760 timesteps (hourly for a year)
-num_heliostats = 2
+# Example heliostat setup. 11 Heliostats, each at a certain angle during the whole year.
+num_heliostats = 11
 num_timesteps = 8760
-physical_model.helios.tilt = {0: np.random.uniform(30, 60, (num_heliostats, num_timesteps))}
+fixed_tilt_angles = np.array([5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 45.0, 50.0, 55.0])
+physical_model.helios.tilt = {0: np.tile(fixed_tilt_angles, (num_timesteps, 1)).T}
 
 # Compute optical extinction weights
 physical_model.helios.compute_extinction_weights(sim_data, loss_model="geometry", verbose=True)
 
-# Manually set sim_data.dt if missing
-if not sim_data.dt:
-    sim_data.dt = {0: 3600}  # 1-hour time step
-
 # Calculate deposition flux to populate pdfqN
 physical_model.deposition_flux(sim_data, hrz0=physical_model.hrz0, verbose=True)
 
-# Optionally define sigma_dep
-sigma_dep = 0.01  # Example value
-
 # Calculate delta soiled area
+sigma_dep = 0.01
 physical_model.calculate_delta_soiled_area(sim_data, sigma_dep=sigma_dep, verbose=True)
 
 # Access and analyze results
 delta_soiled_area = physical_model.helios.delta_soiled_area[0]
-print(f"Delta Soiled Area (shape): {delta_soiled_area.shape}")
-print(f"Delta Soiled Area (sample): {delta_soiled_area[:5, :5]}")
 
+# Generate time (hours) for the x-axis
+time = np.arange(num_timesteps)
+
+# Plot the delta_soiled_area for each heliostat
+plt.figure(figsize=(12, 8))
+
+for i in range(num_heliostats):
+    plt.plot(time, delta_soiled_area[i, :], label=f"Heliostat {i+1}", linewidth=1.5)
+
+# Add labels and title
+plt.xlabel("Time (hours)")
+plt.ylabel("Soiled Area (m²/m²)")
+plt.title("Soiling of Heliostats Over Time")
+plt.legend(loc='upper right')
+plt.grid(True)
+
+# Show the plot
+plt.tight_layout()
+plt.show()
