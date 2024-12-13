@@ -2,7 +2,6 @@
 # Function Script for Raytracing-w-Soiling
 
 import numpy as np
-from scipy.spatial import ConvexHull
 
 # From the relative positions of the receiver to the panel, the angle known as theta aim can be calculated. 
 # See Aiming Strategy for LFRs for more information.
