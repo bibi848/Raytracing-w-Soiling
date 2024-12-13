@@ -41,7 +41,7 @@ from optical_geometrical_setup import trapezoidal_secondary_reflector
 # Location is Woomera and the date is set as 01/04/2023 at 11:00. This can be changed to any date.
 lat, lon = -31.2,136.816667
 timezoneOffset = dt.timedelta(hours = 9.5)
-date = datetime(2023, 4, 1, hour=12, minute=0, second=0, tzinfo=dt.timezone(timezoneOffset))
+date = datetime(2023, 4, 1, hour=11, minute=0, second=0, tzinfo=dt.timezone(timezoneOffset))
 
 # Plant layout
 receiver_height = 4.5    # [m]
@@ -63,7 +63,7 @@ specularity_error = 0.1  # [mrad]
 stg1_height = receiver_height
 stg1_length = panel_length 
 stg1_width = panel_width * len(panel_positions) + panel_spacing * (len(panel_positions) - 1) 
-distance_multiplier = 500 # Scaling factor which pushes the fictitious surface away from the solar field
+distance_multiplier = 10 # Scaling factor which pushes the fictitious surface away from the solar field
 field_coords = [[-3.5, 6], [-3.5, -6], [3.75, 6], [3.75, -6]]
 
 # Create API class instance
@@ -126,7 +126,7 @@ stg2.is_tracethrough = True
 stg2.name = 'Stage 2: Cover'
 stg2.position = Point(0,0,0)
 optics_cover = op_cover_surface(PT, slope_error, specularity_error)
-el2 = trapezoidal_secondary_reflector(stg1, optics_cover, receiver_height, receiver_length)
+el2 = trapezoidal_secondary_reflector(stg2, optics_cover, receiver_height, receiver_length)
 
 # Stage 3, Heliostats
 stg3 = PT.add_stage()
@@ -183,7 +183,7 @@ PT.dni= 1000
 
 # When ray data is extracted, multithreading cannot be used.
 PT.run(-1,False)
-# PT.plot_trace()
+PT.plot_trace()
 
 # Field Parameters
 df = PT.raydata  # Extracting the ray data from the simulation
@@ -229,7 +229,7 @@ print('Cover:', cover_df)
 print('Mirrors:', mirrors_hits)
 print('Receiver:', receiver_tot)
 print()
-print(f'Rays ratio optical efficiency: {eta_opt_rays:.2f}%')
+print(f'Rays ratio optical efficiency: {eta_opt_rays*100:.2f}%')
 print(f'Corrected power per ray: {ppr_corrected:.2f} W/m2')
-print(f'Corrected optical efficiency: {eta_opt_corrected:.2f}%')
-print(f'Corrected IAM: {IAM:.2f}%')
+print(f'Corrected optical efficiency: {eta_opt_corrected*100:.2f}%')
+print(f'Corrected IAM: {IAM*100:.2f}%')
