@@ -6,12 +6,8 @@ Further information for this script can be found on Aiming Strategy for Linear F
 """
 
 # FUNCTIONS
-import sys
-import os
-sys.path.insert(1, os.path.join(sys.path[0], '..'))
 
 import numpy as np
-import matplotlib.pyplot as plt
 import pysolar.solar as solar
 from pysoltrace import PySolTrace, Point
 import datetime as dt
@@ -20,15 +16,9 @@ import pysolar.radiation as radiation
 import warnings
 warnings.filterwarnings("ignore", message="no explicit representation of timezones available for np.datetime64")
 
-
 from raytracing_soiling_functions import calculate_theta_aim
 from raytracing_soiling_functions import calculate_tilt
 from raytracing_soiling_functions import calculate_panel_normal
-from raytracing_soiling_functions import find_normal
-from raytracing_soiling_functions import find_equivalent_cube
-from raytracing_soiling_functions import project_to_plane
-from raytracing_soiling_functions import points_to_2_quadrilaterals
-from raytracing_soiling_functions import fic_surf_pos
 
 from optical_geometrical_setup import op_fictitious_surface
 from optical_geometrical_setup import op_cover_surface
@@ -51,20 +41,19 @@ receiver_position = [0, 0, receiver_height]
 
 panel_length = 12        # [m]
 panel_width = 0.5        # [m]
-panel_height = 0.5       # [m]
+panel_height = 0         # [m], in reality this is innaccurate. However, when aiming the fictitious surface this is necessary.
 panel_spacing = 0.2      # [m]
-# Panel Positions describes the x coordinate for each of the mirrors, ranging from -3.5 [m] to 3.75 [m],
-# with a panel spacing as chosen above. 
-panel_positions = np.arange(-3.5, 3.75, panel_width + panel_spacing) 
-equivalent_cube = find_equivalent_cube(panel_length, panel_width, panel_spacing, panel_height, len(panel_positions))
+
+panel_positions = np.arange(-3.5, 3.75, panel_width + panel_spacing) # Describes the x-coordinate for each of the mirrors, 
+                                                                     # ranging from -3.5 [m] to 3.75 [m].
 slope_error = 0.1        # [mrad]
 specularity_error = 0.1  # [mrad]
 
-stg1_height = receiver_height
 stg1_length = panel_length 
 stg1_width = panel_width * len(panel_positions) + panel_spacing * (len(panel_positions) - 1) 
-distance_multiplier = 10 # Scaling factor which pushes the fictitious surface away from the solar field
-field_coords = [[-3.5, 6], [-3.5, -6], [3.75, 6], [3.75, -6]]
+distance_multiplier = 10                               # Scaling factor which pushes the fictitious surface away from the solar field.
+x_shift = (panel_positions[0] + panel_positions[-1])/2 # As the solar field is not exactly centered along the x-axis, there is a shift 
+                                                       # required for the aiming algorithm.
 
 # Create API class instance
 PT = PySolTrace()
@@ -83,9 +72,9 @@ sun_position = np.array([np.sin(azimuth_rad)*np.sin(zenith_rad), np.cos(azimuth_
 
 # The XYZ position of the sun is then inputted into the SolTrace API. 
 sun = PT.add_sun()
-sun.position.x = 2000*sun_position[0]
-sun.position.y = 2000*sun_position[1]
-sun.position.z = 2000*sun_position[2]
+sun.position.x = sun_position[0]
+sun.position.y = sun_position[1]
+sun.position.z = sun_position[2]
 
 # The sun position vector is normalised, to then find theta transversal and theta longitudinal. 
 sn = sun_position[0:3]/np.linalg.norm(sun_position[0:3])
@@ -103,25 +92,22 @@ Order of Stages:
 
 # Stage 1, Fictitious Surface
 stg1 = PT.add_stage()
-stg1.is_multihit = True
-stg1.is_virtual = False
+stg1.is_virtual = True
 stg1.name = 'Stage 1: Fictitious Surface'
 stg1.position = Point(0,0,0)
 
 optics_fictitious = op_fictitious_surface(PT, slope_error, specularity_error)
 el1 = stg1.add_element()
-el1.position = Point(*(distance_multiplier*sun_position))
-el1.aim = Point(sun_position[0]*distance_multiplier, sun_position[1]*distance_multiplier, 0)
-# aim = sun_position + 1000*find_normal(sun_position, [0,0,0])
-# el0.aim = Point(*aim)
+el1.position = Point(distance_multiplier*(sun_position[0]+x_shift), 
+                     distance_multiplier*sun_position[1], 
+                     distance_multiplier*sun_position[2])
+el1.aim = Point(distance_multiplier*(sun_position[0]+x_shift), distance_multiplier*sun_position[1], 0)
 el1.surface_flat()
 el1.aperture_rectangle(stg1_width, stg1_length)
 el1.optic = optics_fictitious
-el1.interaction = 1
 
 # Stage 2, Cover
 stg2 = PT.add_stage()
-stg2.is_multihit = False
 stg2.is_tracethrough = True
 stg2.name = 'Stage 2: Cover'
 stg2.position = Point(0,0,0)
@@ -130,7 +116,6 @@ el2 = trapezoidal_secondary_reflector(stg2, optics_cover, receiver_height, recei
 
 # Stage 3, Heliostats
 stg3 = PT.add_stage()
-stg3.is_multihit = True
 stg3.name = 'Stage 3: Heliostats'
 stg3.position = Point(0,0,0)
 tilt_list =[]
@@ -155,7 +140,7 @@ for p in range(len(panel_positions)):
 # Stage 4, Receiver & Secondary Reflector
 stg4 = PT.add_stage()
 stg4.is_multihit = True
-stg4.name = 'Stage 3: Receiver & Secondary Reflector'
+stg4.name = 'Stage 4: Receiver & Secondary Reflector'
 stg4.position = Point(0,0,0)
 optics_receiver = op_receiver_surface(PT)
 
@@ -175,11 +160,6 @@ PT.max_rays_traced = PT.num_ray_hits*100
 PT.is_sunshape = True
 PT.is_surface_errors = True
 PT.dni= 1000
-
-# if __name__ == "__main__":
-
-#     PT.run(-1, False, 5)
-#     # PT.plot_trace()
 
 # When ray data is extracted, multithreading cannot be used.
 PT.run(-1,False)
