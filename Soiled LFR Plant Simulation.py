@@ -1,5 +1,5 @@
 #%%
-# Initialisation
+# Initialisation...
 """
 Integrating the soiling model from HelioSoil to the LFR plant design.
 This script generates a csv file containing information about the tilts of the heliostats across 2018 along with their respective
@@ -118,13 +118,16 @@ print('All tilt calculations done')
 sigma_dep = 0.01 
 nominal_reflectivity = 1.0
 
-physical_model.helios.tilt = {0: np.rad2deg(tilt_angles_rad)}
-physical_model.helios.compute_extinction_weights(sim_data, loss_model="geometry", verbose=False)
-physical_model.deposition_flux(sim_data, hrz0=physical_model.hrz0, verbose=False)
-physical_model.calculate_delta_soiled_area(sim_data, sigma_dep=sigma_dep, verbose=False)
+# Using HelioSoil to set up and simulate the soiling of the solar field.
+physical_model.helios.tilt = {0: np.rad2deg(tilt_angles_rad)}                                    # Inputting the tilt angles calculated from the entire year.
+physical_model.helios.compute_extinction_weights(sim_data, loss_model="geometry", verbose=False) # Computing the optical extinction weights.
+physical_model.deposition_flux(sim_data, hrz0=physical_model.hrz0, verbose=False)                # Computing the deposition flux, to populate the pdfqN?
+physical_model.calculate_delta_soiled_area(sim_data, sigma_dep=sigma_dep, verbose=False)         # Computing the change in soiled area.
 delta_soiled_area = physical_model.helios.delta_soiled_area[0]
 
-cleaning_frequency = 100*24 # hours, this represents after how many hours of use the panel's soiled area is reset to zero.
+cleaning_frequency = 100*24 # Hours, representing after how many hours of use the panel's soiled area is reset to zero.
+
+# With the cleaning frequency, the cumulative soiled area is calculated.
 cumulative_soiled_area = np.zeros_like(delta_soiled_area)
 reflectivity = np.zeros_like(delta_soiled_area)
 for i in range(num_heliostats):
@@ -134,7 +137,7 @@ for i in range(num_heliostats):
         if t % cleaning_frequency == 0:
             cumulative_soiled_area[i,t] = 0
 
-        reflectivity[i,t] = nominal_reflectivity * (1 - cumulative_soiled_area[i,t])
+        reflectivity[i,t] = nominal_reflectivity * (1 - cumulative_soiled_area[i,t]) # Inaccurate equation still.
         
 for i in range(len(reflectivity)):
     reflectivity[i][0] = 1.0

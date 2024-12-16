@@ -28,10 +28,10 @@ from optical_geometrical_setup import op_secondaryReflector_surface
 from optical_geometrical_setup import trapezoidal_secondary_reflector
 
 # Date and Location
-# Location is Woomera and the date is set as 01/04/2023 at 11:00. This can be changed to any date.
+# Location is Woomera and the date is set as 01/04/2018 at 11:00. This can be changed to any date.
 lat, lon = -31.2,136.816667
 timezoneOffset = dt.timedelta(hours = 9.5)
-date = datetime(2023, 4, 1, hour=11, minute=0, second=0, tzinfo=dt.timezone(timezoneOffset))
+date = datetime(2018, 4, 1, hour=11, minute=0, second=0, tzinfo=dt.timezone(timezoneOffset))
 
 # Plant layout
 receiver_height = 4.5    # [m]
@@ -161,7 +161,7 @@ PT.is_sunshape = True
 PT.is_surface_errors = True
 PT.dni= 1000
 
-# When ray data is extracted, multithreading cannot be used.
+# When ray data is extracted, the in-built multithreading cannot be used.
 PT.run(-1,False)
 PT.plot_trace()
 

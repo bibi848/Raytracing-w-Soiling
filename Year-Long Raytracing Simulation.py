@@ -1,19 +1,19 @@
-#%%
-# Module Initialisation and Importing CSV
+
 """
-This script uses the CSV file generated in "Soiled LFR Plant Simulation.py" to take the tilt angles and the reflectivity values
-and applies it to the raytracing calculations. 
+This script implements the soiled results from the csv file soiled_data.csv generated from "Soiled LFR Plant Simulation.py" into
+the raytracing simulation set up in LFR Plant Example.py. This allows the efficiency of the plant at each hour of the year to be 
+calculated. To speed up this script, not only were many calculations performed in "Soiled LFR Plant Simulation.py" (like finding
+the angles of the sun) and then passed to this script in the csv file, but the main loop is also within a multiprocess structure, 
+so that multiple cores from the computer's CPU can speed up the calculation. This has resulted in a time reduction of 79%.
 """
+# Module Initialisation and Importing CSVs
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import time as tmr
+import time
+import os
+from multiprocessing import Pool
 from pysoltrace import PySolTrace, Point
-import warnings
-warnings.filterwarnings("ignore", message="no explicit representation of timezones available for np.datetime64")
 
-from raytracing_soiling_functions import calculate_theta_aim
-from raytracing_soiling_functions import calculate_tilt
 from raytracing_soiling_functions import calculate_panel_normal
 
 from optical_geometrical_setup import op_fictitious_surface
@@ -23,7 +23,6 @@ from optical_geometrical_setup import op_receiver_surface
 from optical_geometrical_setup import op_secondaryReflector_surface
 from optical_geometrical_setup import trapezoidal_secondary_reflector
 
-import os
 current_script_path = os.path.abspath(__file__)           
 current_directory = os.path.dirname(current_script_path)  
 csv_path = os.path.join(current_directory, "CSV Result Files/soiled_data.csv")
@@ -53,6 +52,7 @@ distance_multiplier = 10                               # Scaling factor which pu
 x_shift = (panel_positions[0] + panel_positions[-1])/2 # As the solar field is not exactly centered along the x-axis, there is a shift 
                                                        # required for the aiming algorithm.
 
+# Extracting the data required from the soiled_data.csv
 azimuths_deg = df['Azimuth [deg]'].to_numpy()
 azimuths_rad = np.deg2rad(azimuths_deg)
 elevations_deg = df['Elevation [deg]'].to_numpy()
@@ -71,28 +71,24 @@ tilts_deg = df[tilt_header_list].to_numpy().T
 tilts_rad = np.deg2rad(tilts_deg)
 reflectivities = df[reflectivity_header_list].to_numpy().T
 
-#%%
 # Simulating the solar field for every hour of the year
-start_time = tmr.time()
+start_time = time.time()
 optical_efficiency = []
 peak_efficiency = []
 efficiency = []
 
-for i in range(num_timesteps):
+# Main function which is called from the multiprocessing 'Pool', called below. 
+# This function is practically the same as the one from LFR Plant Example, where under a specific position of the sun, 
+# a raytracing simulation is performed to find the efficiency of the plant.
+def ray_trace(i):
 
-    print(i)
-
-    if (i % 24 == 0) and (i > 0):
-        peak_efficiency.append(max(efficiency))
-        efficiency = []
-
-    if elevations_deg[i] > 0:
+    if elevations_deg[i] > 0: # Only simulate raytracing if the sun is above the horizon.
         # Create API class instance
         PT = PySolTrace()
 
         azimuth_rad = azimuths_rad[i]
         zenith_rad = np.pi/2 - elevations_rad[i]
-    
+
         # Describing the sun's position in terms of the azimuth and zenith. The full breakdown for this result is shown in
         # Aiming Strategy for LFRs document. 
         sun_position = np.array([np.sin(azimuth_rad)*np.sin(zenith_rad), np.cos(azimuth_rad)*np.sin(zenith_rad), np.cos(zenith_rad)])
@@ -169,7 +165,6 @@ for i in range(num_timesteps):
         PT.is_surface_errors = True
         PT.dni= 1000
 
-        # When ray data is extracted, multithreading cannot be used.
         PT.run(-1,False)
 
         # Field Parameters
@@ -183,35 +178,29 @@ for i in range(num_timesteps):
         else:
             eta_opt_rays = 0
 
-        #optical_efficiency.append(eta_opt_rays)
-        efficiency.append(eta_opt_rays)
+        return eta_opt_rays
     
-    else:
-        #optical_efficiency.append(0)
-        efficiency.append(0)
+    else: # When the sun is below the horizon, the efficiency of the plant is 0.
+         return 0
 
-end_time = tmr.time()
-print('Simulation Took', (end_time - start_time), 'seconds')
+csv_data = {}
 
-#%%
-# Plotting Collected Data
+# Multiprocessing
+if __name__ == "__main__":
+    cores = 12           # Number of CPU cores used/ parallel processes. Can be changed to match the appropriate hardware.
+    ran = num_timesteps  # Number of inputs the function will process.
 
-time = np.arange(num_timesteps)
-ax2_x_axis = np.arange(len(peak_efficiency))
-fig, ax1 = plt.subplots()
+    start_multi = time.time()
+    with Pool(cores) as pool:
+        data_multi = pool.map(ray_trace, range(ran))
+    end_multi = time.time()
 
-for i in range(num_heliostats):
-    ax1.plot(time, reflectivities[i, :], label=f"Heliostat {i+1}", linewidth=1.5)
-ax1.set_xlabel('Time [Hours]')
-ax1.set_ylabel('Heliostat Reflectivities', color = 'blue')
-ax1.tick_params(axis='y', labelcolor = 'blue')
+    print()
+    print('Time Taken:', end_multi - start_multi)
 
-ax2 = ax1.twinx()
-ax2.plot(ax2_x_axis, peak_efficiency, color = 'red', label = 'Peak Efficiency')
-ax2.set_ylabel('Peak Efficiency per 24 hour period', color = 'red')
-ax2.tick_params(axis='y', labelcolor='red')
+    # Appending the results to a csv
+    filepath = current_directory + '/CSV Result Files/raytrace_results.csv'
+    csv_data["Efficiency"] = data_multi
 
-ax1.grid(True)
-plt.show()
-
-# %%
+    df = pd.DataFrame(csv_data)
+    df.to_csv(filepath, index = False)
