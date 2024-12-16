@@ -1540,8 +1540,8 @@ class PySolTrace:
             res = pdll.st_sim_run( c_void_p(p_data), c_uint16(seed), 
                     c_bool(as_power_tower), api_callback, thread_id)
             
-            if thread_id == 0:
-                print("\nSimulation complete. Total simulation time {:.2f} seconds.".format(time.time()-tstart))
+            # if thread_id == 0:
+            #     print("\nSimulation complete. Total simulation time {:.2f} seconds.".format(time.time()-tstart))
 
             # Collect simulation output, including raw ray data and sunbox stats
             self.raydata = self.__get_ray_dataframe(pdll,p_data)

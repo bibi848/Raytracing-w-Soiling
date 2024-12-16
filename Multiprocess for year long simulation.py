@@ -182,8 +182,8 @@ def ray_trace(i):
 csv_data = {}
 
 if __name__ == "__main__":
-    cores = 10
-    ran = 100
+    cores = 12
+    ran = num_timesteps
 
     start_multi = time.time()
     with Pool(cores) as pool:
@@ -191,13 +191,11 @@ if __name__ == "__main__":
     end_multi = time.time()
 
     print()
-    print(end_multi - start_multi)
+    print('Time Taken:', end_multi - start_multi)
 
     filepath = current_directory + '/CSV Result Files/raytrace_results.csv'
 
     csv_data["Efficiency"] = data_multi
-
-    print(csv_data)
 
     df = pd.DataFrame(csv_data)
     df.to_csv(filepath, index = False)

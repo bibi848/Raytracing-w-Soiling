@@ -35,12 +35,6 @@ import soiling_model.base_models as smb
 from raytracing_soiling_functions import calculate_theta_aim
 from raytracing_soiling_functions import calculate_tilt
 
-def phi_from_tilt(tilt, ):
-    return 0
-
-def h(phi):
-    return 2/np.cos(phi)
-
 # LFR Plant Setup
 lat, lon = -31.2,136.816667 # Location: Woomera
 
@@ -118,7 +112,7 @@ for i,date in enumerate(datetime_list):
             tilt_angles_rad[p][i] = np.pi/2
     
 print('All tilt calculations done')
-print(sun_positions)
+
 #%%
 # Finding the equivalent reflectivity of each panel for each hour of the year
 sigma_dep = 0.01 
