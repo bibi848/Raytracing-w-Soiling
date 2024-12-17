@@ -15,6 +15,7 @@ from multiprocessing import Pool
 from pysoltrace import PySolTrace, Point
 
 from raytracing_soiling_functions import calculate_panel_normal
+from raytracing_soiling_functions import import_simulation_parameters
 
 from optical_geometrical_setup import op_fictitious_surface
 from optical_geometrical_setup import op_cover_surface
@@ -25,26 +26,17 @@ from optical_geometrical_setup import trapezoidal_secondary_reflector
 
 current_script_path = os.path.abspath(__file__)           
 current_directory = os.path.dirname(current_script_path)  
-csv_path = os.path.join(current_directory, "CSV Result Files/soiled_data.csv")
+csv_path = os.path.join(current_directory, "CSV Files/soiled_data.csv")
 df = pd.read_csv(csv_path)
 
-# Plant layout
-lat, lon = -31.2,136.816667 # Woomera
-receiver_height = 4.5    # [m]
-receiver_length = 12     # [m]
-receiver_diameter = 0.15 # [m]
+# LFR Plant Setup 
+csv_path = os.path.join(current_directory, "CSV Files/Simulation Parameters.csv")
+lat, lon, hour_offset, receiver_height, receiver_length, receiver_diameter, panel_length, panel_width, panel_height, panel_spacing, panels_min_max, slope_error, specularity_error = import_simulation_parameters(pd.read_csv(csv_path))
+
 receiver_position = [0, 0, receiver_height]
+panel_positions = np.arange(panels_min_max[0], panels_min_max[1], panel_width + panel_spacing) 
+num_heliostats = len(panel_positions)                                
 
-panel_length = 12        # [m]
-panel_width = 0.5        # [m]
-panel_height = 0         # [m], in reality this is innaccurate. However, when aiming the fictitious surface this is necessary.
-panel_spacing = 0.2      # [m]
-
-panel_positions = np.arange(-3.5, 3.75, panel_width + panel_spacing) # Describes the x-coordinate for each of the mirrors, 
-                                                                     # ranging from -3.5 [m] to 3.75 [m].
-num_heliostats = len(panel_positions)
-slope_error = 0.1        # [mrad]
-specularity_error = 0.1  # [mrad]
 A_aperture = len(panel_positions) * panel_width * panel_length
 
 stg1_length = panel_length 
@@ -208,7 +200,7 @@ if __name__ == "__main__":
     print('Time Taken:', end_multi - start_multi)
 
     # Appending the results to a csv
-    filepath = current_directory + '/CSV Result Files/raytrace_results.csv'
+    filepath = current_directory + '/CSV Files/raytrace_results.csv'
 
     uncorrected_efficiency = []
     corrected_efficiency = []

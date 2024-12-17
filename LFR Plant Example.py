@@ -6,8 +6,9 @@ Further information for this script can be found on Aiming Strategy for Linear F
 """
 
 # FUNCTIONS
-
+import os
 import numpy as np
+import pandas as pd
 import pysolar.solar as solar
 from pysoltrace import PySolTrace, Point
 import datetime as dt
@@ -19,6 +20,7 @@ warnings.filterwarnings("ignore", message="no explicit representation of timezon
 from raytracing_soiling_functions import calculate_theta_aim
 from raytracing_soiling_functions import calculate_tilt
 from raytracing_soiling_functions import calculate_panel_normal
+from raytracing_soiling_functions import import_simulation_parameters
 
 from optical_geometrical_setup import op_fictitious_surface
 from optical_geometrical_setup import op_cover_surface
@@ -27,28 +29,22 @@ from optical_geometrical_setup import op_receiver_surface
 from optical_geometrical_setup import op_secondaryReflector_surface
 from optical_geometrical_setup import trapezoidal_secondary_reflector
 
+# Importing plant parameters
+current_script_path = os.path.abspath(__file__)           
+current_directory = os.path.dirname(current_script_path)  
+csv_path = os.path.join(current_directory, "CSV Files/Simulation Parameters.csv")
+lat, lon, hour_offset, receiver_height, receiver_length, receiver_diameter, panel_length, panel_width, panel_height, panel_spacing, panels_min_max, slope_error, specularity_error = import_simulation_parameters(pd.read_csv(csv_path))
+
 # Date and Location
 # Location is Woomera and the date is set as 01/04/2018 at 11:00. This can be changed to any date.
-lat, lon = -31.2,136.816667
-timezoneOffset = dt.timedelta(hours = 9.5)
-date = datetime(2018, 7, 1, hour=11, minute=0, second=0, tzinfo=dt.timezone(timezoneOffset))
+timezoneOffset = dt.timedelta(hours = hour_offset)
+date = datetime(2018, 4, 1, hour=11, minute=0, second=0, tzinfo=dt.timezone(timezoneOffset))
 
 # Plant layout
-receiver_height = 4.5    # [m]
-receiver_length = 12     # [m]
-receiver_diameter = 0.15 # [m]
 receiver_position = [0, 0, receiver_height]
 
-panel_length = 12        # [m]
-panel_width = 0.5        # [m]
-panel_height = 0         # [m], in reality this is innaccurate. However, when aiming the fictitious surface this is necessary.
-panel_spacing = 0.2      # [m]
-
-panel_positions = np.arange(-3.5, 3.75, panel_width + panel_spacing) # Describes the x-coordinate for each of the mirrors, 
-                                                                     # ranging from -3.5 [m] to 3.75 [m].
-slope_error = 0.1        # [mrad]
-specularity_error = 0.1  # [mrad]
-
+panel_positions = np.arange(panels_min_max[0], panels_min_max[1], panel_width + panel_spacing) # Describes the x-coordinate for each of the mirrors, 
+                                                                                               # ranging from -3.5 [m] to 3.75 [m].
 stg1_length = panel_length 
 stg1_width = panel_width * len(panel_positions) + panel_spacing * (len(panel_positions) - 1) 
 distance_multiplier = 10                               # Scaling factor which pushes the fictitious surface away from the solar field.

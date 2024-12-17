@@ -34,21 +34,15 @@ import soiling_model.base_models as smb
 
 from raytracing_soiling_functions import calculate_theta_aim
 from raytracing_soiling_functions import calculate_tilt
+from raytracing_soiling_functions import import_simulation_parameters
 
-# LFR Plant Setup
-lat, lon = -31.2,136.816667 # Location: Woomera
-
-receiver_height = 4.5    # [m]
-receiver_length = 12     # [m]
-receiver_diameter = 0.15 # [m]
+# LFR Plant Setup 
+csv_path = os.path.join(current_directory, "CSV Files/Simulation Parameters.csv")
+lat, lon, hour_offset, receiver_height, receiver_length, receiver_diameter, panel_length, panel_width, panel_height, panel_spacing, panels_min_max, slope_error, specularity_error = import_simulation_parameters(pd.read_csv(csv_path))
+panel_height = 0.5 # Need to think on how to fix this
 receiver_position = [0, 0, receiver_height]
-
-panel_length = 12        # [m]
-panel_width = 0.5        # [m]
-panel_height = 0.5       # [m]
-panel_spacing = 0.2      # [m]
-panel_positions = np.arange(-3.5, 3.75, panel_width + panel_spacing) # Describes the x coordinate for each of the mirros, 
-num_heliostats = len(panel_positions)                                # ranging from -3.5m to 3.75m.
+panel_positions = np.arange(panels_min_max[0], panels_min_max[1], panel_width + panel_spacing) 
+num_heliostats = len(panel_positions)                                
 
 # File paths to data sheets
 file_params = heliosoil_path + "/woomera_demo/parameters.xlsx"
@@ -175,7 +169,7 @@ plt.show()
 #%%
 # Appending data to a CSV
 
-filepath = current_directory + '/CSV Result Files/soiled_data.csv'
+filepath = current_directory + '/CSV Files/soiled_data.csv'
 
 data = {
     "Date" : datetime_list,

@@ -2,6 +2,9 @@
 # Function Script for Raytracing-w-Soiling
 
 import numpy as np
+import os
+import pandas as pd
+import ast
 
 # From the relative positions of the receiver to the panel, the angle known as theta aim can be calculated. 
 # See Aiming Strategy for LFRs for more information.
@@ -26,4 +29,23 @@ def find_normal(input_point, output_point):
                        output_point[1] - input_point[1],
                        output_point[2] - input_point[2]])
     return normal
+
+# Distributes the parameters from the imported parameter dataframe.
+def import_simulation_parameters(dataframe):
+    num = dataframe.to_numpy()
+    lat = float(num[0][1])
+    lon = float(num[1][1])
+    timezoneOffset = float(num[2][1])
+    receiver_height = float(num[3][1])
+    receiver_length = float(num[4][1])
+    receiver_diameter = float(num[5][1])
+    panel_length = float(num[6][1])
+    panel_width = float(num[7][1])
+    panel_height = float(num[8][1])
+    panel_spacing = float(num[9][1])
+    panel_positions = ast.literal_eval(num[10][1])
+    slope_error = float(num[11][1])
+    specularity_error = float(num[12][1])    
+
+    return lat, lon, timezoneOffset, receiver_height, receiver_length, receiver_diameter, panel_length, panel_width, panel_height, panel_spacing, panel_positions, slope_error, specularity_error
 

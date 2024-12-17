@@ -15,9 +15,9 @@ import os
 # Finding the script's directory to then find the data csv files produced in previous scripts.
 current_script_path = os.path.abspath(__file__)           
 current_directory = os.path.dirname(current_script_path)  
-csv_path = os.path.join(current_directory, "CSV Result Files/soiled_data.csv")
+csv_path = os.path.join(current_directory, "CSV Files/soiled_data.csv")
 df_soiled_data = pd.read_csv(csv_path)
-csv_path = os.path.join(current_directory, "CSV Result Files/raytrace_results.csv")
+csv_path = os.path.join(current_directory, "CSV Files/raytrace_results.csv")
 df_raytrace_results = pd.read_csv(csv_path)
 
 # Extracting the data from the csv file created in Soiled LFR Plant Simulation.py
