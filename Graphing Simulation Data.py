@@ -4,7 +4,6 @@ and includes some data manipulation, such as calculating the peak efficiency per
 the heliostats per hour.
 """
 
-
 #%% 
 # Importing Modules...
 
@@ -43,14 +42,15 @@ tilts_rad = np.deg2rad(tilts_deg)
 reflectivities = df_soiled_data[reflectivity_header_list].to_numpy().T
 
 # Extracting the data from the csv file created in Year-Long Raytracing Simulation.py
-efficiencies = df_raytrace_results["Efficiency"].to_numpy()
+uncorrected_efficiencies = df_raytrace_results["Uncorrected efficiency"].to_numpy()
+corrected_efficiencies = df_raytrace_results["Corrected efficiency"].to_numpy()
 
 #%% 
 # Manipulating data...
 
 # As the efficiency has been calculated for each hour of the year, it is broken down into blocks of 24,
 # and the peak efficiency is found from each block. This represents the highest efficiency out of the 24 hour period.
-days = [efficiencies[i:i + 24] for i in range(0, len(efficiencies), 24)]
+days = [uncorrected_efficiencies[i:i + 24] for i in range(0, len(uncorrected_efficiencies), 24)]
 peak_efficiencies = []
 for day in days:
     peak_efficiencies.append(max(day))
@@ -58,6 +58,11 @@ for day in days:
 peak_efficiency_times = []
 for i in range(len(peak_efficiencies)):
     peak_efficiency_times.append(i*24)
+
+days = [corrected_efficiencies[i:i + 24] for i in range(0, len(corrected_efficiencies), 24)]
+peak_c_efficiencies = []
+for day in days:
+    peak_c_efficiencies.append(max(day))
 
 # For each hour of the year, the average reflectivity of the n heliostats is found. 
 # This can represent the overall soiling effect on the whole field.
@@ -71,6 +76,7 @@ for i in range(num_timesteps):
 #%%
 # Plotting data...
 
+# Plotting the change in heliostat reflectivity over the year
 plt.figure(figsize=(12, 6))
 t = np.arange(num_timesteps)
 
@@ -85,21 +91,21 @@ plt.grid(True)
 plt.tight_layout()
 plt.show()
 
-
+# Overlaying the change in reflectivity with the uncorrected peak efficiencies
 fig, ax1 = plt.subplots(figsize=(12, 6))
-
 ax1.plot(t, avg_reflectivities, color="blue", label="Average Reflectivities")
 ax1.set_xlabel("Hours")
-ax1.set_ylabel("Average Reflectivities", color="blue")
+ax1.set_ylabel("Average Reflectivity", color="blue")
 ax1.tick_params(axis="y", labelcolor="blue")
 
 ax2 = ax1.twinx()  
-ax2.plot(peak_efficiency_times, peak_efficiencies, color="red", label="Peak Efficiencies")
-ax2.set_ylabel("Peak Efficiency (per day)", color="red")
-ax2.tick_params(axis="y", labelcolor="red")
+ax2.plot(peak_efficiency_times, peak_efficiencies, color="red", label="Uncorrected")
+ax2.plot(peak_efficiency_times, peak_c_efficiencies, color="green", label="Corrected")
+ax2.set_ylabel("Peak Efficiency (per day)", color="black")
+ax2.tick_params(axis="y", labelcolor="black")
+ax2.legend()
 
 ax1.grid(True)
 plt.show()
-
 
 # %%

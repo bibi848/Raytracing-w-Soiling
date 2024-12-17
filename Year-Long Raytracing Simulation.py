@@ -45,6 +45,7 @@ panel_positions = np.arange(-3.5, 3.75, panel_width + panel_spacing) # Describes
 num_heliostats = len(panel_positions)
 slope_error = 0.1        # [mrad]
 specularity_error = 0.1  # [mrad]
+A_aperture = len(panel_positions) * panel_width * panel_length
 
 stg1_length = panel_length 
 stg1_width = panel_width * len(panel_positions) + panel_spacing * (len(panel_positions) - 1) 
@@ -58,6 +59,7 @@ azimuths_rad = np.deg2rad(azimuths_deg)
 elevations_deg = df['Elevation [deg]'].to_numpy()
 elevations_rad = np.deg2rad(elevations_deg)
 num_timesteps = len(df['Date'].to_numpy())
+transversal_angles = df['Theta T [rad]'].to_numpy()
 
 tilt_header_list = []
 reflectivity_header_list = []
@@ -88,6 +90,7 @@ def ray_trace(i):
 
         azimuth_rad = azimuths_rad[i]
         zenith_rad = np.pi/2 - elevations_rad[i]
+        theta_T = transversal_angles[i]
 
         # Describing the sun's position in terms of the azimuth and zenith. The full breakdown for this result is shown in
         # Aiming Strategy for LFRs document. 
@@ -156,7 +159,7 @@ def ray_trace(i):
         el4.aperture_singleax_curve(0, 0, receiver_length) # (inner coordinate of revolved section, outer coordinate of revolved section, 
                                                            # length of revolved section along axis of revolution)
         optics_secondary = op_secondaryReflector_surface(PT, slope_error, specularity_error)
-        el4 = trapezoidal_secondary_reflector(stg3, optics_secondary, receiver_height, receiver_length)
+        el4 = trapezoidal_secondary_reflector(stg4, optics_secondary, receiver_height, receiver_length)
 
         # Simulation Parameters
         PT.num_ray_hits = 1e4
@@ -172,16 +175,22 @@ def ray_trace(i):
 
         mirrors_hits = df[(df['stage']==3) & (df['element'] != 0)]['number'].unique().shape[0]   # Number of rays hitting stage 3
         receiver_abs = df[(df['stage'] == 4) & (df['element'] == -1)].shape[0]  # Number of rays hitting receiver from mirrors
+        cover_miss = df[(df['stage']==2) & (df['element'] == 0)]['number'].unique().shape[0]        # Number of rays missing stage 2
+        rays_gaps = cover_miss - mirrors_hits # Rays in the space between mirrors
+
+        ppr_corrected = stg1_width * panel_length * np.cos(theta_T) * PT.dni / (PT.num_ray_hits - rays_gaps)
     
         if mirrors_hits != 0:
             eta_opt_rays = receiver_abs / mirrors_hits
+            eta_opt_corrected = receiver_abs * ppr_corrected / (PT.dni * A_aperture)
         else:
             eta_opt_rays = 0
+            eta_opt_corrected = 0
 
-        return eta_opt_rays
+        return [eta_opt_rays, eta_opt_corrected]
     
     else: # When the sun is below the horizon, the efficiency of the plant is 0.
-         return 0
+         return [0,0]
 
 csv_data = {}
 
@@ -200,7 +209,15 @@ if __name__ == "__main__":
 
     # Appending the results to a csv
     filepath = current_directory + '/CSV Result Files/raytrace_results.csv'
-    csv_data["Efficiency"] = data_multi
+
+    uncorrected_efficiency = []
+    corrected_efficiency = []
+    for i in range(len(data_multi)):
+        uncorrected_efficiency.append(data_multi[i][0])
+        corrected_efficiency.append(data_multi[i][1])
+
+    csv_data["Uncorrected efficiency"] = uncorrected_efficiency
+    csv_data["Corrected efficiency"] = corrected_efficiency
 
     df = pd.DataFrame(csv_data)
     df.to_csv(filepath, index = False)

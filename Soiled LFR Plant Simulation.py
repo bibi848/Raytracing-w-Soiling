@@ -82,7 +82,7 @@ print('Finding all heliostat tilts...')
 tilt_angles_rad = np.zeros((num_heliostats, num_timesteps))
 elevation_angles_deg = [] # These are used to collect data, later placed into the csv file.
 azimuth_angles_deg = []
-sun_positions = []
+transversal_angles = []
 for i,date in enumerate(datetime_list):
 
     # Finding the position of the sun
@@ -98,9 +98,9 @@ for i,date in enumerate(datetime_list):
         # The maths used below are well shown and visualised in the Aiming Strategy for Linear Fresnel Reflectors,
         # in the Helpful Documents folder.
         sun_position = np.array([np.sin(azimuth_rad)*np.sin(zenith_rad), np.cos(azimuth_rad)*np.sin(zenith_rad), np.cos(zenith_rad)])
-        sun_positions.append(sun_position)
         sn = sun_position[0:3]/np.linalg.norm(sun_position[0:3])
         theta_T = np.arctan(sn[0]/sn[2])
+        transversal_angles.append(theta_T)
 
         # Finding the tilt of the of the heliostat according to the position of the sun
         for p, x_position in enumerate(panel_positions):
@@ -110,6 +110,7 @@ for i,date in enumerate(datetime_list):
     else: # When the sun is below the horizon, so it is night and the panels are kept upright.
         for p in range(num_heliostats):
             tilt_angles_rad[p][i] = np.pi/2
+        transversal_angles.append(0)
     
 print('All tilt calculations done')
 
@@ -125,7 +126,7 @@ physical_model.deposition_flux(sim_data, hrz0=physical_model.hrz0, verbose=False
 physical_model.calculate_delta_soiled_area(sim_data, sigma_dep=sigma_dep, verbose=False)         # Computing the change in soiled area.
 delta_soiled_area = physical_model.helios.delta_soiled_area[0]
 
-cleaning_frequency = 100*24 # Hours, representing after how many hours of use the panel's soiled area is reset to zero.
+cleaning_frequency = 50*24 # Hours, representing after how many hours of use the panel's soiled area is reset to zero.
 
 # With the cleaning frequency, the cumulative soiled area is calculated.
 cumulative_soiled_area = np.zeros_like(delta_soiled_area)
@@ -180,6 +181,7 @@ data = {
     "Date" : datetime_list,
     "Azimuth [deg]" : azimuth_angles_deg,
     "Elevation [deg]" : elevation_angles_deg,
+    "Theta T [rad]" : transversal_angles,
 }
 
 # The 3 for loops below append the heliostat tilts, hourly changes in soiled area, and cumulative soiled area for 

@@ -31,7 +31,7 @@ from optical_geometrical_setup import trapezoidal_secondary_reflector
 # Location is Woomera and the date is set as 01/04/2018 at 11:00. This can be changed to any date.
 lat, lon = -31.2,136.816667
 timezoneOffset = dt.timedelta(hours = 9.5)
-date = datetime(2018, 4, 1, hour=11, minute=0, second=0, tzinfo=dt.timezone(timezoneOffset))
+date = datetime(2018, 7, 1, hour=11, minute=0, second=0, tzinfo=dt.timezone(timezoneOffset))
 
 # Plant layout
 receiver_height = 4.5    # [m]
@@ -152,7 +152,7 @@ el4.surface_cylindrical(receiver_diameter/2)
 el4.aperture_singleax_curve(0, 0, receiver_length) # (inner coordinate of revolved section, outer coordinate of revolved section, 
                                                    # length of revolved section along axis of revolution)
 optics_secondary = op_secondaryReflector_surface(PT, slope_error, specularity_error)
-el4 = trapezoidal_secondary_reflector(stg3, optics_secondary, receiver_height, receiver_length)
+el4 = trapezoidal_secondary_reflector(stg4, optics_secondary, receiver_height, receiver_length)
 
 # Simulation Parameters
 PT.num_ray_hits = 1e4
@@ -182,7 +182,6 @@ receiver_tot = df[(df['stage'] == 4) & (df['element'] != 0)].shape[0] # Number o
 
 # Optical efficiency and power per ray
 A_aperture = len(panel_positions) * panel_width * panel_length # Mirrored surface
-A_eff_i = panel_length * (panel_width * np.cos(tilt_list))     # Effective surface for each panel due to slope angle
 
 # Efficiency
 ppr_corrected = stg1_width * panel_length * np.cos(theta_T) * PT.dni / (PT.num_ray_hits - rays_gaps)
@@ -192,8 +191,6 @@ if (mirrors_hits) != 0:
 else:
     eta_opt_corrected = 0   
    
-E_sun = A_aperture * solar_radiation        # Overall amount of energy that hits the total aperture area
-E_sun_real = E_sun * eta_opt_corrected 
 eta_opt_zero = 0.686
 eta_opt_rays = receiver_abs / mirrors_hits
 IAM = eta_opt_corrected/eta_opt_zero
@@ -207,7 +204,7 @@ print('Number of rays hitting,')
 print('Fictitious surface:', fictitious_df)
 print('Cover:', cover_df)
 print('Mirrors:', mirrors_hits)
-print('Receiver:', receiver_tot)
+print('Receiver:', receiver_abs)
 print()
 print(f'Rays ratio optical efficiency: {eta_opt_rays*100:.2f}%')
 print(f'Corrected power per ray: {ppr_corrected:.2f} W/m2')

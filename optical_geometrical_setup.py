@@ -33,7 +33,7 @@ def op_cover_surface(PT, slope_error, specularity_error):
     optics_secondary = PT.add_optic("Cover")
     optics_secondary.front.reflectivity = 1.0 
     optics_secondary.front.transmissivity = 0.0
-    optics_secondary.back.reflectivity = 0.0 
+    optics_secondary.back.reflectivity = 1.0 
     optics_secondary.back.transmissivity = 0.0
     optics_secondary.front.slope_error = slope_error
     optics_secondary.front.specularity_error = specularity_error
