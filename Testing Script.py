@@ -6,8 +6,9 @@ Further information for this script can be found on Aiming Strategy for Linear F
 """
 
 # FUNCTIONS
-
+import os
 import numpy as np
+import pandas as pd
 import pysolar.solar as solar
 from pysoltrace import PySolTrace, Point
 import datetime as dt
@@ -19,6 +20,7 @@ warnings.filterwarnings("ignore", message="no explicit representation of timezon
 from raytracing_soiling_functions import calculate_theta_aim
 from raytracing_soiling_functions import calculate_tilt
 from raytracing_soiling_functions import calculate_panel_normal
+from raytracing_soiling_functions import import_simulation_parameters
 
 from optical_geometrical_setup import op_fictitious_surface
 from optical_geometrical_setup import op_cover_surface
@@ -27,33 +29,29 @@ from optical_geometrical_setup import op_receiver_surface
 from optical_geometrical_setup import op_secondaryReflector_surface
 from optical_geometrical_setup import trapezoidal_secondary_reflector
 
+# Importing plant parameters
+current_script_path = os.path.abspath(__file__)           
+current_directory = os.path.dirname(current_script_path)  
+csv_path = os.path.join(current_directory, "CSV Files/Simulation Parameters.csv")
+lat, lon, hour_offset, receiver_height, receiver_length, receiver_diameter, panel_length, panel_width, panel_height, panel_spacing, panels_min_max, slope_error, specularity_error = import_simulation_parameters(pd.read_csv(csv_path))
+panel_height = 0.5
+
 # Date and Location
 # Location is Woomera and the date is set as 01/04/2018 at 11:00. This can be changed to any date.
-lat, lon = -31.2,136.816667
-timezoneOffset = dt.timedelta(hours = 9.5)
-date = datetime(2018, 4, 1, hour=11, minute=0, second=0, tzinfo=dt.timezone(timezoneOffset))
+timezoneOffset = dt.timedelta(hours = hour_offset)
+date = datetime(2018, 4, 1, hour=17, minute=0, second=0, tzinfo=dt.timezone(timezoneOffset))
 
 # Plant layout
-receiver_height = 4.5    # [m]
-receiver_length = 12     # [m]
-receiver_diameter = 0.15 # [m]
 receiver_position = [0, 0, receiver_height]
 
-panel_length = 12        # [m]
-panel_width = 0.5        # [m]
-panel_height = 0         # [m], in reality this is innaccurate. However, when aiming the fictitious surface this is necessary.
-panel_spacing = 0.2      # [m]
-
-panel_positions = np.arange(-3.5, 3.75, panel_width + panel_spacing) # Describes the x-coordinate for each of the mirrors, 
-                                                                     # ranging from -3.5 [m] to 3.75 [m].
-slope_error = 0.1        # [mrad]
-specularity_error = 0.1  # [mrad]
-
+panel_positions = np.arange(panels_min_max[0], panels_min_max[1], panel_width + panel_spacing) # Describes the x-coordinate for each of the mirrors, 
+                                                                                               # ranging from -3.5 [m] to 3.75 [m].
 stg1_length = panel_length 
 stg1_width = panel_width * len(panel_positions) + panel_spacing * (len(panel_positions) - 1) 
-distance_multiplier = 7                                # Scaling factor which pushes the fictitious surface away from the solar field.
+distance_multiplier = 10                               # Scaling factor which pushes the fictitious surface away from the solar field.
 x_shift = (panel_positions[0] + panel_positions[-1])/2 # As the solar field is not exactly centered along the x-axis, there is a shift 
                                                        # required for the aiming algorithm.
+z_shift = panel_height/10
 
 # Create API class instance
 PT = PySolTrace()
@@ -98,21 +96,21 @@ stg1.position = Point(0,0,0)
 
 optics_fictitious = op_fictitious_surface(PT, slope_error, specularity_error)
 el1 = stg1.add_element()
-el1.position = Point(distance_multiplier*(sun_position[0]+x_shift), 
+el1.position = Point(distance_multiplier*(sun_position[0] + x_shift), 
                      distance_multiplier*sun_position[1], 
-                     distance_multiplier*sun_position[2])
+                     distance_multiplier*(sun_position[2] + z_shift))
 el1.aim = Point(distance_multiplier*(sun_position[0]+x_shift), distance_multiplier*sun_position[1], 0)
 el1.surface_flat()
 el1.aperture_rectangle(stg1_width, stg1_length)
 el1.optic = optics_fictitious
 
-# Stage 2, Cover
-stg2 = PT.add_stage()
-stg2.is_tracethrough = True
-stg2.name = 'Stage 2: Cover'
-stg2.position = Point(0,0,0)
-optics_cover = op_cover_surface(PT, slope_error, specularity_error)
-el2 = trapezoidal_secondary_reflector(stg2, optics_cover, receiver_height, receiver_length)
+# # Stage 2, Cover
+# stg2 = PT.add_stage()
+# stg2.is_tracethrough = True
+# stg2.name = 'Stage 2: Cover'
+# stg2.position = Point(0,0,0)
+# optics_cover = op_cover_surface(PT, slope_error, specularity_error)
+# el2 = trapezoidal_secondary_reflector(stg2, optics_cover, receiver_height, receiver_length)
 
 # Stage 3, Heliostats
 stg3 = PT.add_stage()
@@ -137,100 +135,76 @@ for p in range(len(panel_positions)):
     el3.surface_flat()
     el3.aperture_rectangle(panel_width, panel_length)
 
-# Stage 4, Receiver & Secondary Reflector
-stg4 = PT.add_stage()
-stg4.is_multihit = True
-stg4.name = 'Stage 4: Receiver & Secondary Reflector'
-stg4.position = Point(0,0,0)
-optics_receiver = op_receiver_surface(PT)
+# # Stage 4, Receiver & Secondary Reflector
+# stg4 = PT.add_stage()
+# stg4.is_multihit = True
+# stg4.name = 'Stage 4: Receiver & Secondary Reflector'
+# stg4.position = Point(0,0,0)
+# optics_receiver = op_receiver_surface(PT)
 
-el4 = stg4.add_element()
-el4.position = Point(*receiver_position)
-el4.aim = Point(0,0,0)
-el4.optic = optics_receiver
-el4.surface_cylindrical(receiver_diameter/2)
-el4.aperture_singleax_curve(0, 0, receiver_length) # (inner coordinate of revolved section, outer coordinate of revolved section, 
-                                                   # length of revolved section along axis of revolution)
-optics_secondary = op_secondaryReflector_surface(PT, slope_error, specularity_error)
-el4 = trapezoidal_secondary_reflector(stg4, optics_secondary, receiver_height, receiver_length)
+# el4 = stg4.add_element()
+# el4.position = Point(*receiver_position)
+# el4.aim = Point(0,0,0)
+# el4.optic = optics_receiver
+# el4.surface_cylindrical(receiver_diameter/2)
+# el4.aperture_singleax_curve(0, 0, receiver_length) # (inner coordinate of revolved section, outer coordinate of revolved section, 
+#                                                    # length of revolved section along axis of revolution)
+# optics_secondary = op_secondaryReflector_surface(PT, slope_error, specularity_error)
+# el4 = trapezoidal_secondary_reflector(stg4, optics_secondary, receiver_height, receiver_length)
 
 # Simulation Parameters
-PT.num_ray_hits = 1e4
+PT.num_ray_hits = 1e5
 PT.max_rays_traced = PT.num_ray_hits*100
 PT.is_sunshape = True
 PT.is_surface_errors = True
 PT.dni= 1000
 
-# % Run SolTrace --> START RAY TRACING ==================================================================================================================
+# When ray data is extracted, the in-built multithreading cannot be used.
 PT.run(-1,False)
-# PT.plot_trace()
-df = PT.raydata # dataframe that collect all the data related to the simulation
+PT.plot_trace()
 
-# add one more column at the actual dataframe in order to simplify the further analysis
-counts = df['number'].value_counts() 
-counts_dict = counts.to_dict() # Convert the counts series to a dictionary
-df['occurrences'] = df['number'].map(counts_dict) # Create a new column 'occurrences' based on the counts
-                
-# cover analysis 
-fictitious_df = df[(df['stage'] == 1) & (df['element'] != 0)]['number'].unique().shape[0]
-cover_df = df[(df['stage'] == 2) & (df['element'] != 0)]['number'].unique().shape[0] # absorbed or reflected by the cover
-cover_miss = df[(df['stage']==2) & (df['element'] == 0)]['number'].unique().shape[0] 
-rays_stage2 = cover_df + cover_miss
+# # Field Parameters
+# df = PT.raydata  # Extracting the ray data from the simulation
 
-# mirrors analysis
-mirrors_abs = df[(df['stage']==3) & (df['element'] < 0)]['number'].unique().shape[0] # reflectance loss mirrors
-mirrors_refl = df[(df['stage'] == 3) & (df['element'] > 0)]['number'].unique().shape[0]  # rays may or may not hit the stage 3
-mirrors_hits = df[(df['stage']==3) & (df['element'] != 0)]['number'].unique().shape[0] # can be REFLECTED or ABSORBED by mirrors or they could even miss them (going in the gap btw mirrors)
-rays_gaps = cover_miss - mirrors_hits # rays in the space btw mirrors
-rays_stage3 = mirrors_abs + mirrors_refl + rays_gaps  
+# fictitious_df = df[(df['stage'] == 1) & (df['element'] != 0)]['number'].unique().shape[0]   # Number of rays hitting stage 1
+# cover_df = df[(df['stage'] == 2) & (df['element'] != 0)]['number'].unique().shape[0]        # Number of rays hitting stage 2
+# cover_miss = df[(df['stage']==2) & (df['element'] == 0)]['number'].unique().shape[0]        # Number of rays missing stage 2
 
-# receiver analysis
-receiver_abs = df[(df['stage'] == 4) & (df['element'] == -1)].shape[0] # number of rays hit the target and have been reflected by the mirrors
-receiver_refl =  df[(df['stage'] == 4) & (df['element'] == 1)].shape[0]
-receiver_test = df[(df['stage'] == 4) & (df['element'] != 0)]['number'].unique().shape[0]
-receiver_tot = receiver_abs + receiver_refl
+# mirrors_abs = df[(df['stage']==3) & (df['element'] < 0)]['number'].unique().shape[0]     # Number of rays absorbed by stage 3
+# mirrors_refl = df[(df['stage'] == 3) & (df['element'] > 0)]['number'].unique().shape[0]  # Number of rays reflected by stage 3
+# mirrors_hits = df[(df['stage']==3) & (df['element'] != 0)]['number'].unique().shape[0]   # Number of rays hitting stage 3
+# rays_gaps = cover_miss - mirrors_hits # Rays in the space between mirrors
 
-# Optical efficiency and power per ray
-A_aperture = len(panel_positions) * panel_width * panel_length # Mirrored surface
-A_eff_i = panel_length * (panel_width * np.cos(tilt_list))     # Effective surface for each panel due to slope angle
+# receiver_abs = df[(df['stage'] == 4) & (df['element'] == -1)].shape[0]  # Number of rays hitting receiver from mirrors
+# receiver_tot = df[(df['stage'] == 4) & (df['element'] != 0)].shape[0] # Number of rays 
 
-# Efficiency
-ppr_corrected = stg1_width * panel_length * np.cos(theta_T) * PT.dni / (PT.num_ray_hits - rays_gaps)
+# # Optical efficiency and power per ray
+# A_aperture = len(panel_positions) * panel_width * panel_length # Mirrored surface
+
+# # Efficiency
+# ppr_corrected = stg1_width * panel_length * np.cos(theta_T) * PT.dni / (PT.num_ray_hits - rays_gaps)
     
-if (mirrors_hits) != 0:
-    eta_opt_corrected = receiver_abs * ppr_corrected / (PT.dni * A_aperture)
-else:
-    eta_opt_corrected = 0   
+# if (mirrors_hits) != 0:
+#     eta_opt_corrected = receiver_abs * ppr_corrected / (PT.dni * A_aperture)
+# else:
+#     eta_opt_corrected = 0   
    
-E_sun = A_aperture * solar_radiation        # Overall amount of energy that hits the total aperture area
-E_sun_real = E_sun * eta_opt_corrected 
-eta_opt_zero = 0.686
-eta_opt_rays = receiver_tot / mirrors_hits
-IAM = eta_opt_corrected/eta_opt_zero
+# eta_opt_zero = 0.686
+# eta_opt_rays = receiver_abs / mirrors_hits
+# IAM = eta_opt_corrected/eta_opt_zero
 
-# Results
-print()
-print('The sun is at an azimuth of', round(azimuth_deg), 'and a zenith of', round(zenith_deg))
-print("Number of rays traced: {:d}".format(PT.raydata.index.size))
-print()
-print('Number of rays hitting,')
-print('Fictitious surface:', fictitious_df)
-print('Cover:', cover_df)
-print('Mirrors:', mirrors_hits)
-print('Receiver:', receiver_tot)
-print()
-print(f'Rays ratio optical efficiency: {eta_opt_rays*100:.2f}%')
-print(f'Corrected power per ray: {ppr_corrected:.2f} W/m2')
-print(f'Corrected optical efficiency: {eta_opt_corrected*100:.2f}%')
-print(f'Corrected IAM: {IAM*100:.2f}%')
-
-print()
-print('Cover Miss:', cover_miss)
-print('Mirrors_abs:', mirrors_abs)
-print('Mirrors_refl:', mirrors_refl)
-print('Mirror hits:', mirrors_hits)
-print('Ray_gaps:', rays_gaps)
-print('Reciever test', receiver_test)
-
-
-# df.to_csv('raydata.csv', index=False)
+# # Results
+# print()
+# print('The sun is at an azimuth of', round(azimuth_deg), 'and a zenith of', round(zenith_deg))
+# print("Number of rays traced: {:d}".format(PT.raydata.index.size))
+# print()
+# print('Number of rays hitting,')
+# print('Fictitious surface:', fictitious_df)
+# print('Cover:', cover_df)
+# print('Mirrors:', mirrors_hits)
+# print('Receiver:', receiver_abs)
+# print()
+# print(f'Rays ratio optical efficiency: {eta_opt_rays*100:.2f}%')
+# print(f'Corrected power per ray: {ppr_corrected:.2f} W/m2')
+# print(f'Corrected optical efficiency: {eta_opt_corrected*100:.2f}%')
+# print(f'Corrected IAM: {IAM*100:.2f}%')

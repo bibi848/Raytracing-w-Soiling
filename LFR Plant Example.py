@@ -50,6 +50,7 @@ stg1_width = panel_width * len(panel_positions) + panel_spacing * (len(panel_pos
 distance_multiplier = 10                               # Scaling factor which pushes the fictitious surface away from the solar field.
 x_shift = (panel_positions[0] + panel_positions[-1])/2 # As the solar field is not exactly centered along the x-axis, there is a shift 
                                                        # required for the aiming algorithm.
+z_shift = panel_height/10 # Similarly to the x_shift, there is also a positional shift vertically from the height of the panels.
 
 # Create API class instance
 PT = PySolTrace()
@@ -94,9 +95,9 @@ stg1.position = Point(0,0,0)
 
 optics_fictitious = op_fictitious_surface(PT, slope_error, specularity_error)
 el1 = stg1.add_element()
-el1.position = Point(distance_multiplier*(sun_position[0]+x_shift), 
+el1.position = Point(distance_multiplier*(sun_position[0] + x_shift), 
                      distance_multiplier*sun_position[1], 
-                     distance_multiplier*sun_position[2])
+                     distance_multiplier*(sun_position[2] + z_shift))
 el1.aim = Point(distance_multiplier*(sun_position[0]+x_shift), distance_multiplier*sun_position[1], 0)
 el1.surface_flat()
 el1.aperture_rectangle(stg1_width, stg1_length)
@@ -151,7 +152,7 @@ optics_secondary = op_secondaryReflector_surface(PT, slope_error, specularity_er
 el4 = trapezoidal_secondary_reflector(stg4, optics_secondary, receiver_height, receiver_length)
 
 # Simulation Parameters
-PT.num_ray_hits = 1e4
+PT.num_ray_hits = 1e5
 PT.max_rays_traced = PT.num_ray_hits*100
 PT.is_sunshape = True
 PT.is_surface_errors = True

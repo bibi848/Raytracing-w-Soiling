@@ -108,4 +108,15 @@ ax2.legend()
 ax1.grid(True)
 plt.show()
 
+# Plant Efficiency Over a 24 Hour Period
+fig, ax1 = plt.subplots(figsize=(12, 6))
+ax1.plot(t[:24], uncorrected_efficiencies[:24], color="red", label = 'Uncorrected')
+ax1.plot(t[:24], corrected_efficiencies[:24], color="green", label = 'Corrected')
+ax1.set_xlabel("Hours")
+ax1.set_ylabel("Efficiency Across 24 Hour Period", color="black")
+ax1.tick_params(axis="y", labelcolor="black")
+ax1.legend()
+ax1.grid(True)
+plt.show()
+
 # %%

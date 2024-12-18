@@ -32,7 +32,6 @@ df = pd.read_csv(csv_path)
 # LFR Plant Setup 
 csv_path = os.path.join(current_directory, "CSV Files/Simulation Parameters.csv")
 lat, lon, hour_offset, receiver_height, receiver_length, receiver_diameter, panel_length, panel_width, panel_height, panel_spacing, panels_min_max, slope_error, specularity_error = import_simulation_parameters(pd.read_csv(csv_path))
-
 receiver_position = [0, 0, receiver_height]
 panel_positions = np.arange(panels_min_max[0], panels_min_max[1], panel_width + panel_spacing) 
 num_heliostats = len(panel_positions)                                
@@ -44,6 +43,7 @@ stg1_width = panel_width * len(panel_positions) + panel_spacing * (len(panel_pos
 distance_multiplier = 10                               # Scaling factor which pushes the fictitious surface away from the solar field.
 x_shift = (panel_positions[0] + panel_positions[-1])/2 # As the solar field is not exactly centered along the x-axis, there is a shift 
                                                        # required for the aiming algorithm.
+z_shift = panel_height/10 # Similarly to the x_shift, there is also a positional shift vertically from the height of the panels.
 
 # Extracting the data required from the soiled_data.csv
 azimuths_deg = df['Azimuth [deg]'].to_numpy()
@@ -102,9 +102,9 @@ def ray_trace(i):
 
         optics_fictitious = op_fictitious_surface(PT, slope_error, specularity_error)
         el1 = stg1.add_element()
-        el1.position = Point(distance_multiplier*(sun_position[0]+x_shift), 
+        el1.position = Point(distance_multiplier*(sun_position[0] + x_shift), 
                              distance_multiplier*sun_position[1], 
-                             distance_multiplier*sun_position[2])
+                             distance_multiplier*(sun_position[2] + z_shift))
         el1.aim = Point(distance_multiplier*(sun_position[0]+x_shift), distance_multiplier*sun_position[1], 0)
         el1.surface_flat()
         el1.aperture_rectangle(stg1_width, stg1_length)
@@ -188,7 +188,7 @@ csv_data = {}
 
 # Multiprocessing
 if __name__ == "__main__":
-    cores = 12           # Number of CPU cores used/ parallel processes. Can be changed to match the appropriate hardware.
+    cores = 13           # Number of CPU cores used/ parallel processes. Can be changed to match the appropriate hardware.
     ran = num_timesteps  # Number of inputs the function will process.
 
     start_multi = time.time()
