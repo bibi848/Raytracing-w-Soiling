@@ -84,8 +84,8 @@ for i in range(num_heliostats):
     plt.plot(t, reflectivities[i, :], label=f"Heliostat {i+1}", linewidth=1.5)
 
 plt.xlabel("Time (hours)")
-plt.ylabel("Cumulative Soiled Area (m²/m²)")
-plt.title("Soiling of Heliostats Over Time")
+plt.ylabel("Reflectivity")
+plt.title("Change in Heliostat Reflectivities")
 plt.legend()
 plt.grid(True)
 plt.tight_layout()
@@ -96,6 +96,7 @@ fig, ax1 = plt.subplots(figsize=(12, 6))
 ax1.plot(t, avg_reflectivities, color="blue", label="Average Reflectivities")
 ax1.set_xlabel("Hours")
 ax1.set_ylabel("Average Reflectivity", color="blue")
+ax1.set_title('Comparing the Average Field Reflectivity to the Peak Efficiencies')
 ax1.tick_params(axis="y", labelcolor="blue")
 
 ax2 = ax1.twinx()  
@@ -103,8 +104,7 @@ ax2.plot(peak_efficiency_times, peak_efficiencies, color="red", label="Uncorrect
 ax2.plot(peak_efficiency_times, peak_c_efficiencies, color="green", label="Corrected")
 ax2.set_ylabel("Peak Efficiency (per day)", color="black")
 ax2.tick_params(axis="y", labelcolor="black")
-ax2.legend()
-
+ax2.legend(loc='lower right')
 ax1.grid(True)
 plt.show()
 
@@ -114,6 +114,7 @@ ax1.plot(t[:24], uncorrected_efficiencies[:24], color="red", label = 'Uncorrecte
 ax1.plot(t[:24], corrected_efficiencies[:24], color="green", label = 'Corrected')
 ax1.set_xlabel("Hours")
 ax1.set_ylabel("Efficiency Across 24 Hour Period", color="black")
+ax1.set_title('Plant Efficiency Over a 24 Hour Period')
 ax1.tick_params(axis="y", labelcolor="black")
 ax1.legend()
 ax1.grid(True)
