@@ -35,6 +35,7 @@ import soiling_model.base_models as smb
 from raytracing_soiling_functions import calculate_theta_aim
 from raytracing_soiling_functions import calculate_tilt
 from raytracing_soiling_functions import import_simulation_parameters
+from raytracing_soiling_functions import find_normal
 
 # LFR Plant Setup 
 csv_path = os.path.join(current_directory, "CSV Files/Simulation Parameters.csv")
@@ -73,6 +74,7 @@ print('Datetime list done')
 # Finding the tilt angles for all heliostats across the whole year
 print('Finding all heliostat tilts...')
 tilt_angles_rad = np.zeros((num_heliostats, num_timesteps))
+incidence_angles_rad = np.zeros((num_heliostats, num_timesteps))
 elevation_angles_deg = [] # These are used to collect data, later placed into the csv file.
 azimuth_angles_deg = []
 transversal_angles = []
@@ -99,10 +101,15 @@ for i,date in enumerate(datetime_list):
         for p, x_position in enumerate(panel_positions):
             theta_aim = calculate_theta_aim(Xaim=receiver_position[0], Zaim=receiver_position[2], X0=x_position, Z0=panel_height)
             tilt_angles_rad[p][i] = calculate_tilt(theta_T, theta_aim)
+            
+            distance_vec = find_normal([x_position, 0, panel_height],[0, 0, receiver_height])
+            distance_vec = distance_vec[0:3]/np.linalg.norm(distance_vec[0:3])
+            incidence_angles_rad[p][i] = 0.5 * np.arccos(distance_vec.dot(sn))
 
     else: # When the sun is below the horizon, so it is night and the panels are kept upright.
         for p in range(num_heliostats):
             tilt_angles_rad[p][i] = np.pi/2
+            incidence_angles_rad[p][i] = 0
         transversal_angles.append(0)
     
 print('All tilt calculations done')
@@ -121,6 +128,9 @@ delta_soiled_area = physical_model.helios.delta_soiled_area[0]
 
 cleaning_frequency = 50*24 # Hours, representing after how many hours of use the panel's soiled area is reset to zero.
 
+def h(phi):
+    return 2/(np.cos(phi))
+
 # With the cleaning frequency, the cumulative soiled area is calculated.
 cumulative_soiled_area = np.zeros_like(delta_soiled_area)
 reflectivity = np.zeros_like(delta_soiled_area)
@@ -131,7 +141,7 @@ for i in range(num_heliostats):
         if t % cleaning_frequency == 0:
             cumulative_soiled_area[i,t] = 0
 
-        reflectivity[i,t] = nominal_reflectivity * (1 - cumulative_soiled_area[i,t]) # Inaccurate equation still.
+        reflectivity[i,t] = nominal_reflectivity * (1 - cumulative_soiled_area[i,t]* h(incidence_angles_rad[i,t]))
         
 for i in range(len(reflectivity)):
     reflectivity[i][0] = 1.0

@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 import time
 import os
-from multiprocessing import Pool
+from multiprocessing import Pool, cpu_count
 from pysoltrace import PySolTrace, Point
 
 from raytracing_soiling_functions import calculate_panel_normal
@@ -188,7 +188,7 @@ csv_data = {}
 
 # Multiprocessing
 if __name__ == "__main__":
-    cores = 13           # Number of CPU cores used/ parallel processes. Can be changed to match the appropriate hardware.
+    cores = cpu_count()  # Number of CPU cores used/ parallel processes. Can be changed to match the appropriate hardware.
     ran = num_timesteps  # Number of inputs the function will process.
 
     start_multi = time.time()
