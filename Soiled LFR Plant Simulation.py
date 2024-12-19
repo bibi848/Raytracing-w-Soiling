@@ -126,7 +126,7 @@ physical_model.deposition_flux(sim_data, hrz0=physical_model.hrz0, verbose=False
 physical_model.calculate_delta_soiled_area(sim_data, sigma_dep=sigma_dep, verbose=False)         # Computing the change in soiled area.
 delta_soiled_area = physical_model.helios.delta_soiled_area[0]
 
-cleaning_frequency = 50*24 # Hours, representing after how many hours of use the panel's soiled area is reset to zero.
+cleaning_frequency = 14*24 # Hours, representing after how many hours of use the panel's soiled area is reset to zero.
 
 def h(phi):
     return 2/(np.cos(phi))
