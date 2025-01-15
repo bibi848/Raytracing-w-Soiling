@@ -1,6 +1,9 @@
 # Optical and Geometrical Setup for PySolTrace
 
 from pysoltrace import Point
+from raytracing_soiling_functions import find_normal
+import numpy as np
+
 
 # Optical
 def stg_surface(PT, name, f_reflectivity, b_reflectivity, f_transmissivity, b_transmissivity, slope_error = 0, specularity_error = 0):
@@ -102,3 +105,59 @@ def trapezoidal_secondary_reflector(stg, optics, receiver_height, receiver_lengt
     el.interaction = 2
 
     return el
+
+
+# Design of a parabolic secondary reflector
+
+def para_eqn(a, x, c):
+    return -(a * x**2) + c
+
+def PSR_panel_positions(num_divisions, focal_length, diameter, receiver_height):
+
+    a = 1 / (4 * focal_length)
+    dist = 2*diameter / num_divisions
+    sample_points_x = [-diameter]
+    sample_points_y = [para_eqn(a, diameter, focal_length) + receiver_height]
+    mid_points_x = []
+    mid_points_y = []
+    x_coord = -diameter
+
+    for i in range(num_divisions):
+
+        mid_points_x.append((2*x_coord + dist) / 2)
+        mid_points_y.append(((para_eqn(a, x_coord, focal_length) + para_eqn(a, x_coord + dist, focal_length)) / 2) + receiver_height)
+
+        x_coord += dist
+        sample_points_x.append(x_coord)
+        sample_points_y.append((para_eqn(a, x_coord, focal_length)) + receiver_height)
+
+    return mid_points_x, mid_points_y, sample_points_x, sample_points_y
+
+def PSR_PT_positioning(stg, optics, panel_length, mid_points_x, mid_points_y, sample_points_x, sample_points_y):
+    for p in range(len(mid_points_x)):
+
+        reflector_position = np.array([mid_points_x[p], 0, mid_points_y[p]])
+
+        point1 = reflector_position
+        point2 = np.array([sample_points_x[p], 6, sample_points_y[p]])
+        point3 = np.array([sample_points_x[p+1], 6, sample_points_y[p+1]])
+
+        v1 = point2 - point1
+        v2 = point3 - point1
+
+        n = np.cross(v1, v2)
+        width = np.linalg.norm(point3-point2)
+
+        el = stg.add_element()
+        el.position = Point(*reflector_position)
+        aim = reflector_position + 1000*n
+        el.aim = Point(*aim)
+        el.optic = optics
+        el.surface_flat()
+        el.aperture_rectangle(width, panel_length)
+
+
+
+
+
+

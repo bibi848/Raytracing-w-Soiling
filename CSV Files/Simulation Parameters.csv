@@ -12,3 +12,6 @@ Panel Spacing [m],0.2
 Panel Positions [m],"[-3.5, 3.75]"
 Slope Error [mrad],0.1
 Specularity Error [mrad],0.1
+PSR Divisions,16
+PSR Focal Length [m],0.05
+PSR Diameter [m],0.2
