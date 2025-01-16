@@ -31,7 +31,7 @@ df = pd.read_csv(csv_path)
 
 # LFR Plant Setup 
 csv_path = os.path.join(current_directory, "CSV Files/Simulation Parameters.csv")
-lat, lon, hour_offset, receiver_height, receiver_length, receiver_diameter, panel_length, panel_width, panel_height, panel_spacing, panels_min_max, slope_error, specularity_error = import_simulation_parameters(pd.read_csv(csv_path))
+lat, lon, hour_offset, receiver_height, receiver_length, receiver_diameter, panel_length, panel_width, panel_height, panel_spacing, panels_min_max, slope_error, specularity_error, PSR_divisions, PSR_focal_length, PSR_diameter = import_simulation_parameters(pd.read_csv(csv_path))
 receiver_position = [0, 0, receiver_height]
 panel_positions = np.arange(panels_min_max[0], panels_min_max[1], panel_width + panel_spacing) 
 num_heliostats = len(panel_positions)                                
@@ -54,16 +54,16 @@ num_timesteps = len(df['Date'].to_numpy())
 transversal_angles = df['Theta T [rad]'].to_numpy()
 
 tilt_header_list = []
-reflectivity_header_list = []
+reflectance_header_list = []
 for i in range(num_heliostats):
     tilt_header = f"Heliostat tilt [deg] {i+1}"
-    reflectivity_header = f"Heliostat Reflectivity {i+1}"
+    reflectance_header = f"Heliostat Reflectance {i+1}"
     tilt_header_list.append(tilt_header)
-    reflectivity_header_list.append(reflectivity_header)
+    reflectance_header_list.append(reflectance_header)
 
 tilts_deg = df[tilt_header_list].to_numpy().T
 tilts_rad = np.deg2rad(tilts_deg)
-reflectivities = df[reflectivity_header_list].to_numpy().T
+reflectances = df[reflectance_header_list].to_numpy().T
 
 # Simulating the solar field for every hour of the year
 start_time = time.time()
@@ -123,7 +123,7 @@ def ray_trace(i):
         stg3.name = 'Stage 3: Heliostats'
         stg3.position = Point(0,0,0)
         for p in range(num_heliostats):
-            optics_heliostat_p = op_heliostat_surface(PT, slope_error, specularity_error, reflectivities[p][i], p)
+            optics_heliostat_p = op_heliostat_surface(PT, slope_error, specularity_error, reflectances[p][i], p)
 
             heliostat_position = [panel_positions[p], 0, panel_height]
             panel_normal = calculate_panel_normal(tilts_rad[p][i])

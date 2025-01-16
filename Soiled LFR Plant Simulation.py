@@ -39,7 +39,7 @@ from raytracing_soiling_functions import find_normal
 
 # LFR Plant Setup 
 csv_path = os.path.join(current_directory, "CSV Files/Simulation Parameters.csv")
-lat, lon, hour_offset, receiver_height, receiver_length, receiver_diameter, panel_length, panel_width, panel_height, panel_spacing, panels_min_max, slope_error, specularity_error = import_simulation_parameters(pd.read_csv(csv_path))
+lat, lon, hour_offset, receiver_height, receiver_length, receiver_diameter, panel_length, panel_width, panel_height, panel_spacing, panels_min_max, slope_error, specularity_error, PSR_divisions, PSR_focal_length, PSR_diameter = import_simulation_parameters(pd.read_csv(csv_path))
 receiver_position = [0, 0, receiver_height]
 panel_positions = np.arange(panels_min_max[0], panels_min_max[1], panel_width + panel_spacing) 
 num_heliostats = len(panel_positions)                                
@@ -115,9 +115,9 @@ for i,date in enumerate(datetime_list):
 print('All tilt calculations done')
 
 #%%
-# Finding the equivalent reflectivity of each panel for each hour of the year
+# Finding the equivalent reflectance of each panel for each hour of the year
 sigma_dep = 0.01 
-nominal_reflectivity = 1.0
+nominal_reflectance = 1.0
 
 # Using HelioSoil to set up and simulate the soiling of the solar field.
 physical_model.helios.tilt = {0: np.rad2deg(tilt_angles_rad)}                                    # Inputting the tilt angles calculated from the entire year.
@@ -131,20 +131,28 @@ cleaning_frequency = 14*24 # Hours, representing after how many hours of use the
 def h(phi):
     return 2/(np.cos(phi))
 
+def calc_reflectance(nominal_reflectance, cumulative_soiled_area, incidence_angle_rad):
+    return nominal_reflectance * (1 - cumulative_soiled_area * h(incidence_angle_rad))
+
 # With the cleaning frequency, the cumulative soiled area is calculated.
 cumulative_soiled_area = np.zeros_like(delta_soiled_area)
-reflectivity = np.zeros_like(delta_soiled_area)
+reflectance = np.zeros_like(delta_soiled_area)
 for i in range(num_heliostats):
     for t in range(1, num_timesteps):
         cumulative_soiled_area[i,t] = cumulative_soiled_area[i, t-1] + delta_soiled_area[i, t]
 
-        if t % cleaning_frequency == 0:
+        # # Constant cleaning Frequency
+        # if t % cleaning_frequency == 0:
+        #     cumulative_soiled_area[i,t] = 0
+
+        # Conditional Cleaning Frequency
+        if (calc_reflectance(nominal_reflectance, cumulative_soiled_area[i,t], incidence_angles_rad[i,t])) < 0.7:
             cumulative_soiled_area[i,t] = 0
 
-        reflectivity[i,t] = nominal_reflectivity * (1 - cumulative_soiled_area[i,t]* h(incidence_angles_rad[i,t]))
+        reflectance[i,t] = calc_reflectance(nominal_reflectance, cumulative_soiled_area[i,t], incidence_angles_rad[i,t])
         
-for i in range(len(reflectivity)):
-    reflectivity[i][0] = 1.0
+for i in range(len(reflectance)):
+    reflectance[i][0] = 1.0
 
 #%%
 # Plotting the soiling of the heliostats over the year
@@ -165,11 +173,11 @@ plt.show()
 plt.figure(figsize=(12, 6))
 
 for i in range(num_heliostats):
-    plt.plot(time, reflectivity[i, :], label=f"Heliostat {i+1}", linewidth=1.5)
+    plt.plot(time, reflectance[i, :], label=f"Heliostat {i+1}", linewidth=1.5)
 
 plt.xlabel("Time (hours)")
-plt.ylabel("Heliostat Reflectivity")
-plt.title("Change In Heliostat Reflectivity Over Time")
+plt.ylabel("Heliostat Reflectance")
+plt.title("Change In Heliostat Reflectance Over Time")
 plt.legend()
 plt.grid(True)
 plt.tight_layout()
@@ -199,8 +207,8 @@ for i in range(num_heliostats):
     key = f"Cumulative Soiled Area [m2/m2] {i+1}"
     data[key] = cumulative_soiled_area[i]
 for i in range(num_heliostats):
-    key = f"Heliostat Reflectivity {i+1}"
-    data[key] = reflectivity[i]
+    key = f"Heliostat Reflectance {i+1}"
+    data[key] = reflectance[i]
 
 df = pd.DataFrame(data)
 df.to_csv(filepath, index=False)

@@ -1,6 +1,6 @@
 """
 This script graphs all the data collected in both "Soiled LFR Plant Simulation.py" and "Year-Long Raytracing Simulation.py",
-and includes some data manipulation, such as calculating the peak efficiency per 24 hour period and the average reflectivies of
+and includes some data manipulation, such as calculating the peak efficiency per 24 hour period and the average reflectance of
 the heliostats per hour.
 """
 
@@ -30,16 +30,16 @@ num_timesteps = len(df_soiled_data['Date'].to_numpy())
 num_heliostats = 11
 
 tilt_header_list = []
-reflectivity_header_list = []
+reflectance_header_list = []
 for i in range(num_heliostats):
     tilt_header = f"Heliostat tilt [deg] {i+1}"
-    reflectivity_header = f"Heliostat Reflectivity {i+1}"
+    reflectance_header = f"Heliostat Reflectance {i+1}"
     tilt_header_list.append(tilt_header)
-    reflectivity_header_list.append(reflectivity_header)
+    reflectance_header_list.append(reflectance_header)
 
 tilts_deg = df_soiled_data[tilt_header_list].to_numpy().T
 tilts_rad = np.deg2rad(tilts_deg)
-reflectivities = df_soiled_data[reflectivity_header_list].to_numpy().T
+reflectances = df_soiled_data[reflectance_header_list].to_numpy().T
 
 # Extracting the data from the csv file created in Year-Long Raytracing Simulation.py
 uncorrected_efficiencies = df_raytrace_results["Uncorrected efficiency"].to_numpy()
@@ -68,40 +68,40 @@ for day in days_corrected:
     peak_c_efficiencies.append(max(day))
     avg_c_efficiencies.append(np.mean(day))
 
-# For each hour of the year, the average reflectivity of the n heliostats is found. 
+# For each hour of the year, the average reflectance of the n heliostats is found. 
 # This can represent the overall soiling effect on the whole field.
-avg_reflectivities = []
+avg_reflectances = []
 for i in range(num_timesteps):
     avg = []
     for p in range(num_heliostats):
-        avg.append(reflectivities[p][i])
-    avg_reflectivities.append(sum(avg)/len(avg))
+        avg.append(reflectances[p][i])
+    avg_reflectances.append(sum(avg)/len(avg))
 
 #%%
 # Plotting data...
 
-# Plotting the change in heliostat reflectivity over the year
+# Plotting the change in heliostat reflectance over the year
 plt.figure(figsize=(12, 6))
 t = np.arange(num_timesteps)
 
 for i in range(num_heliostats):
-    plt.plot(t, reflectivities[i, :], label=f"Heliostat {i+1}", linewidth=1.5)
+    plt.plot(t, reflectances[i, :], label=f"Heliostat {i+1}", linewidth=1.5)
 
 plt.xlabel("Time (hours)")
-plt.ylabel("Reflectivity")
-plt.title("Change in Heliostat Reflectivities")
+plt.ylabel("Reflectance")
+plt.title("Change in Heliostat Reflectances")
 plt.legend()
 plt.grid(True)
 plt.tight_layout()
 plt.show()
 
-# Overlaying the change in reflectivity with the uncorrected peak efficiencies
+# Overlaying the change in reflectance with the uncorrected peak efficiencies
 
 fig, ax1 = plt.subplots(figsize=(12, 6))
-ax1.plot(t, avg_reflectivities, color="blue", label="Average Reflectivities")
+ax1.plot(t, avg_reflectances, color="blue", label="Average Reflectances")
 ax1.set_xlabel("Hours")
-ax1.set_ylabel("Average Reflectivity", color="blue")
-ax1.set_title('Comparing the Average Field Reflectivity to the Peak Efficiencies')
+ax1.set_ylabel("Average Reflectance", color="blue")
+ax1.set_title('Comparing the Average Field Reflectance to the Peak Efficiencies')
 ax1.tick_params(axis="y", labelcolor="blue")
 
 ax2 = ax1.twinx()  
@@ -129,8 +129,8 @@ fig, ax1 = plt.subplots(figsize=(12, 6))
 ax1.plot(t[2812:2851], uncorrected_efficiencies[2812:2851], color="red", label = 'Uncorrected')
 ax1.plot(t[2812:2851], corrected_efficiencies[2812:2851], color="green", label = 'Corrected')
 ax1.set_xlabel("Hours")
-ax1.set_ylabel("Test", color="black")
-ax1.set_title('test')
+ax1.set_ylabel("Efficiency", color="black")
+ax1.set_title('Resolution of Data Strongly Affecting Mean Calculations')
 ax1.tick_params(axis="y", labelcolor="black")
 ax1.legend()
 ax1.grid(True)
@@ -138,10 +138,10 @@ plt.show()
 
 # Average efficiencies instead of peak
 fig, ax1 = plt.subplots(figsize=(12, 6))
-ax1.plot(t, avg_reflectivities, color="blue", label="Average Reflectivities")
+ax1.plot(t, avg_reflectances, color="blue", label="Average Reflectances")
 ax1.set_xlabel("Hours")
-ax1.set_ylabel("Average Reflectivity", color="blue")
-ax1.set_title('Comparing the Average Field Reflectivity to the Avg Efficiencies')
+ax1.set_ylabel("Average Reflectance", color="blue")
+ax1.set_title('Comparing the Average Field Reflectance to the Avg Efficiencies')
 ax1.tick_params(axis="y", labelcolor="blue")
 
 ax2 = ax1.twinx()  
