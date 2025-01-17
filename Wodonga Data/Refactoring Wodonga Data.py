@@ -16,14 +16,14 @@ all_data = pd.read_excel("ALL_DATA_WODONGA.xlsx")
 
 # %%
 # Extracting relevant data from Wodonga dataframe
-Time_data = all_data["tmsmp"][3:].reset_index(drop=True)
-AirTemp_data = all_data["M1_T1"][3:].reset_index(drop=True)
-WindSpeed_data = all_data["M1_WS"][3:].reset_index(drop=True)
-WindDir_data = all_data["M1_WD"][3:].reset_index(drop=True)
-RH_data = all_data["M1_ppRH"][3:].reset_index(drop=True)
-Rain_data = all_data["M1_P"][3:].reset_index(drop=True)
-DewPoint_data = all_data["S_DP"][3:].reset_index(drop=True)
-PM10_data = all_data["PM10"][3:].reset_index(drop=True)
+Time_data = all_data["tmsmp"][122:].reset_index(drop=True)
+AirTemp_data = all_data["M1_T1"][122:].reset_index(drop=True)
+WindSpeed_data = all_data["M1_WS"][122:].reset_index(drop=True)
+WindDir_data = all_data["M1_WD"][122:].reset_index(drop=True)
+RH_data = all_data["M1_ppRH"][122:].reset_index(drop=True)
+Rain_data = all_data["M1_P"][122:].reset_index(drop=True)
+DewPoint_data = all_data["S_DP"][122:].reset_index(drop=True)
+PM10_data = all_data["PM10"][122:].reset_index(drop=True)
 data_length = len(Time_data)
 
 Wetbulb_data = pd.Series(np.nan, index=range(data_length))

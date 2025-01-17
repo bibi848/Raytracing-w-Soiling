@@ -7,12 +7,14 @@
 # Getting the current directory's location
 import os
 import sys
-current_script_path = os.path.abspath(__file__)           
-current_directory = os.path.dirname(current_script_path)  
+current_script_path = os.path.abspath(__file__)
+current_directory = os.path.dirname(current_script_path)[:50]
 
 heliosoil_path = os.path.join(current_directory, "HelioSoil")
-sys.path.append(heliosoil_path)
 wodonga_path = os.path.join(current_directory, "Wodonga Data")
+
+sys.path.append(heliosoil_path)
+sys.path.append(current_directory)
 
 # Imported Modules
 import numpy as np
@@ -30,7 +32,7 @@ from raytracing_soiling_functions import import_simulation_parameters
 from raytracing_soiling_functions import find_normal
 
 # LFR Plant Setup 
-csv_path = os.path.join(current_directory, "CSV Files/Simulation Parameters.csv")
+csv_path = os.path.join(wodonga_path, "Wodonga Simulation Parameters.csv")
 lat, lon, hour_offset, receiver_height, receiver_length, receiver_diameter, panel_length, panel_width, panel_height, panel_spacing, panels_min_max, slope_error, specularity_error, PSR_divisions, PSR_focal_length, PSR_diameter = import_simulation_parameters(pd.read_csv(csv_path))
 receiver_position = [0, 0, receiver_height]
 panel_positions = np.arange(panels_min_max[0], panels_min_max[1], panel_width + panel_spacing) 
@@ -138,7 +140,7 @@ for i in range(num_heliostats):
         #     cumulative_soiled_area[i,t] = 0
 
         # Conditional Cleaning Frequency
-        if (calc_reflectance(nominal_reflectance, cumulative_soiled_area[i,t], incidence_angles_rad[i,t])) < 0.7:
+        if (calc_reflectance(nominal_reflectance, cumulative_soiled_area[i,t], incidence_angles_rad[i,t])) < 0.8:
             cumulative_soiled_area[i,t] = 0
 
         reflectance[i,t] = calc_reflectance(nominal_reflectance, cumulative_soiled_area[i,t], incidence_angles_rad[i,t])
@@ -154,7 +156,7 @@ time = np.arange(num_timesteps)
 for i in range(num_heliostats):
     plt.plot(time, cumulative_soiled_area[i, :], label=f"Heliostat {i+1}", linewidth=1.5)
 
-plt.xlabel("Time (hours)")
+plt.xlabel("Time")
 plt.ylabel("Cumulative Soiled Area (m²/m²)")
 plt.title("Soiling of Heliostats Over Time")
 plt.legend()
@@ -167,7 +169,7 @@ plt.figure(figsize=(12, 6))
 for i in range(num_heliostats):
     plt.plot(time, reflectance[i, :], label=f"Heliostat {i+1}", linewidth=1.5)
 
-plt.xlabel("Time (hours)")
+plt.xlabel("Time")
 plt.ylabel("Heliostat Reflectance")
 plt.title("Change In Heliostat Reflectance Over Time")
 plt.legend()
