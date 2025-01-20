@@ -164,9 +164,9 @@ def ray_trace(i):
         # Field Parameters
         df = PT.raydata  # Extracting the ray data from the simulation
 
-        mirrors_hits = df[(df['stage']==3) & (df['element'] != 0)]['number'].unique().shape[0]   # Number of rays hitting stage 3
-        receiver_abs = df[(df['stage'] == 4) & (df['element'] == -1)].shape[0]  # Number of rays hitting receiver from mirrors
-        cover_miss = df[(df['stage']==2) & (df['element'] == 0)]['number'].unique().shape[0]        # Number of rays missing stage 2
+        mirrors_hits = df[(df['stage']==3) & (df['element'] != 0)]['number'].unique().shape[0] # Number of rays hitting stage 3
+        receiver_abs = df[(df['stage'] == 4) & (df['element'] == -1)].shape[0]                 # Number of rays hitting receiver from mirrors
+        cover_miss = df[(df['stage']==2) & (df['element'] == 0)]['number'].unique().shape[0]   # Number of rays missing stage 2
         rays_gaps = cover_miss - mirrors_hits # Rays in the space between mirrors
 
         ppr_corrected = stg1_width * panel_length * np.cos(theta_T) * PT.dni / (PT.num_ray_hits - rays_gaps)

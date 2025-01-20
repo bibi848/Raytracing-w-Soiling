@@ -22,8 +22,11 @@ import pandas as pd
 import pysolar.solar as solar
 import datetime as dt
 from datetime import datetime, timezone, timedelta
+from copy import deepcopy
 
 import soiling_model.base_models as smb
+import soiling_model.fitting as smf
+import soiling_model.utilities as smu
 
 from raytracing_soiling_functions import calculate_theta_aim
 from raytracing_soiling_functions import calculate_tilt
@@ -59,6 +62,91 @@ physical_model.longitude = lon
 physical_model.import_site_data_and_constants(file_params)
 print('Initialisation Done')
 print()
+
+# %%
+# Computing hrz0 from data
+
+reflectometer_incidence_angle = 15       # Angle of incidence of reflectometer
+reflectometer_acceptance_angle = 12.5e-3 # Half acceptance angle of reflectance measurements
+second_surf = True                       # True if using the second-surface model. Otherwise, use first-surface
+d = f"{wodonga_path}/Training Data/"
+train_experiments = [0]                  # Indices for training experiements from 0 to len(files) - 1
+train_mirrors = ["OE_M1_T00"]            # Which mirrors within the experiemnts are used for
+k_factor = None                          # None sets equal to 1.0, "import" imports from the file
+dust_type = "PM10"                       
+
+files,all_intervals,exp_mirrors,all_mirrors = smu.get_training_data(d,"experiment_")
+orientation = [ [s[1] for s in mirrors] for mirrors in exp_mirrors]
+
+# Feb 2022 (first experiment --- remove last three days after rain started)
+all_intervals[0][0] = np.datetime64('2022-02-20T16:20:00')
+all_intervals[0][1] = np.datetime64('2022-02-23T17:40:00')
+
+# April 2022 (remove nothing, first/last measurement)
+all_intervals[1][0] = np.datetime64('2022-04-21T11:00:00')
+all_intervals[1][1] = np.datetime64('2022-04-27T08:30:00')
+
+# Feb 2023 (most recent experiment --- remove very dirty days)
+all_intervals[2][0] = np.datetime64('2023-02-09T15:00:00')
+all_intervals[2][1] = np.datetime64('2023-02-14T09:45:00')
+
+testing_intervals = all_intervals
+
+Nfiles = len(files)
+extract = lambda x,ind: [x[ii] for ii in ind]
+files_train = extract(files,train_experiments)
+training_intervals = extract(all_intervals,train_experiments)
+testing_intervals = list(all_intervals)
+t = [t for t in train_experiments]
+
+imodel = smf.semi_physical(file_params)
+imodel_constant = smf.constant_mean_deposition(file_params)
+sim_data_train = smb.simulation_inputs( files_train,
+                                        k_factors=k_factor,
+                                        dust_type=dust_type
+                                        )
+reflect_data_train = smb.reflectance_measurements(  files_train,
+                                                    sim_data_train.time,
+                                                    number_of_measurements=9.0,
+                                                    reflectometer_incidence_angle=reflectometer_incidence_angle,
+                                                    reflectometer_acceptance_angle=reflectometer_acceptance_angle,
+                                                    import_tilts=True,
+                                                    column_names_to_import=train_mirrors
+                                                    )
+sim_data_train,reflect_data_train = smu.trim_experiment_data(   sim_data_train,
+                                                                reflect_data_train,
+                                                                training_intervals 
+                                                            )
+                                                            
+sim_data_train,reflect_data_train = smu.trim_experiment_data(   sim_data_train,
+                                                                reflect_data_train,
+                                                                "reflectance_data" 
+                                                            )
+
+imodel.helios_angles(sim_data_train, reflect_data_train, second_surface=second_surf)
+imodel.helios.compute_extinction_weights(sim_data_train, imodel.loss_model,
+                                         verbose=False, options={'grid_size_x':1000})
+ext_weights = imodel.helios.extinction_weighting[0].copy()
+
+imodel_constant.helios_angles(sim_data_train,reflect_data_train,second_surface=second_surf)
+file_inds = np.arange(len(files_train))
+imodel_constant = smu.set_extinction_coefficients(imodel_constant,ext_weights,file_inds)
+
+log_param_hat,log_param_cov = imodel.fit_mle(   sim_data_train,
+                                        reflect_data_train,
+                                        transform_to_original_scale=False)
+
+s = np.sqrt(np.diag(log_param_cov))
+param_ci = log_param_hat + 1.96*s*np.array([[-1],[1]])
+lower_ci = imodel.transform_scale(param_ci[0,:])
+upper_ci = imodel.transform_scale(param_ci[1,:])
+param_hat = imodel.transform_scale(log_param_hat)
+hrz0_mle,sigma_dep_mle = param_hat
+print(f'hrz0: {hrz0_mle:.2e} [{lower_ci[0]:.2e}, {upper_ci[0]:.2e}]')
+print(f'\sigma_dep: {sigma_dep_mle:.2e} [{lower_ci[1]:.2e},{upper_ci[1]:.2e}] [p.p./day]')
+
+physical_model.hrz0 = hrz0_mle
+
 
 # %%
 # Finding the tilt angles for all the heliostats across the whole time frame
