@@ -3,11 +3,9 @@
 # Get the directory of the current script
 import os
 import sys
-current_script_path = os.path.abspath("Soiling Test Example.py") # Absolute path to a script
-current_directory = os.path.dirname(current_script_path)         # Directory containing the script
-
-wodonga_path = os.path.join(current_directory, "Wodonga Data")
-wodonga_path += "\\"
+current_script_path = os.path.abspath(__file__)          # Absolute path to a script
+wodonga_directory = os.path.dirname(current_script_path) # Directory containing the script
+HelioSoil_path = wodonga_directory.replace(r"\Wodonga Data", "\\HelioSoil\\woomera_demo\\woomera_data.xlsx")
 
 import pandas as pd
 import numpy as np
@@ -31,6 +29,10 @@ Visibility_data = pd.Series(np.nan, index=range(data_length))
 DNI_data = pd.Series(np.nan, index=range(data_length))
 
 # %%
+# Getting Dust sheet from Woomera Data
+woomera_data = pd.read_excel(HelioSoil_path, sheet_name= "Dust")
+
+# %%
 # Placing data into a new excel file
 
 data_dict = {
@@ -49,6 +51,8 @@ data_dict = {
 
 data_df = pd.DataFrame(data_dict)
 
-data_df.to_excel("Wodonga Data Refactored.xlsx", sheet_name = 'Weather', index = False)
+with pd.ExcelWriter("Wodonga Data Refactored.xlsx", engine='openpyxl') as writer:
+    woomera_data.to_excel(writer, sheet_name='Dust', index=False)
+    data_df.to_excel(writer, sheet_name='Weather', index=False)
 
 #%%

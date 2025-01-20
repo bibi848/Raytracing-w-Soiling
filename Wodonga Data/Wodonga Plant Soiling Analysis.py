@@ -8,10 +8,9 @@
 import os
 import sys
 current_script_path = os.path.abspath(__file__)
-current_directory = os.path.dirname(current_script_path)[:50]
-
-heliosoil_path = os.path.join(current_directory, "HelioSoil")
-wodonga_path = os.path.join(current_directory, "Wodonga Data")
+wodonga_path = os.path.dirname(current_script_path)
+heliosoil_path = wodonga_path.replace(r"\Wodonga Data", "\\HelioSoil")
+current_directory = wodonga_path.replace(r"\Wodonga Data", "")
 
 sys.path.append(heliosoil_path)
 sys.path.append(current_directory)

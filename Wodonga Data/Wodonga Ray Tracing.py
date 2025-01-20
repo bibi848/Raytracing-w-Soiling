@@ -5,7 +5,8 @@
 import os
 import sys
 current_script_path = os.path.abspath(__file__)
-current_directory = os.path.dirname(current_script_path)[:50]
+wodonga_path = os.path.dirname(current_script_path)
+current_directory = wodonga_path.replace(r"\Wodonga Data", "")
 sys.path.append(current_directory)
 
 import numpy as np
@@ -24,8 +25,6 @@ from optical_geometrical_setup import op_receiver_surface
 from optical_geometrical_setup import op_secondaryReflector_surface
 from optical_geometrical_setup import trapezoidal_secondary_reflector
 
-current_script_path = os.path.abspath(__file__)
-current_directory = os.path.dirname(current_script_path)[:50]
 csv_path = current_directory + "\\Wodonga Data\\Wodonga Soiled Data.csv"
 df = pd.read_csv(csv_path)
 
