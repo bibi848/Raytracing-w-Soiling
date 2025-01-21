@@ -1,3 +1,7 @@
+"""
+This script takes ALL_DATA_WODONGA.xlsx and extracts the data required to be placed in a new excel file which can be 
+read by the HelioSoil scripts. 
+"""
 #%%
 # Importing all Wodonga Data
 # Get the directory of the current script

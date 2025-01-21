@@ -1,5 +1,9 @@
 """
-
+This script implements the soiled results from the csv file Wodonga Soiled Data.csv generated from "Wodonga Plant Soiling Analysis.py" 
+into the raytracing simulation set up in LFR Plant Example.py. This allows the efficiency of the plant at each hour of the year to be 
+calculated. To speed up this script, not only were many calculations performed in "Wodonga Plant Soiling Analysis.py" (like finding
+the angles of the sun) and then passed to this script in the csv file, but the main loop is also within a multiprocess structure, 
+so that multiple cores from the computer's CPU can speed up the calculation. This has resulted in a time reduction of 79%.
 """
 # Module Initialisation and Importing CSVs
 import os

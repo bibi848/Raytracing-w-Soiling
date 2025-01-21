@@ -1,9 +1,17 @@
+"""
+Integrating the soiling model from HelioSoil to the LFR plant design in Wodonga.
+This script generates a csv file containing information about the tilts of the heliostats along with their respective
+soiling. This includes soiling increases for every 5 minutes and the cumulative soiling of the heliostats.
+The script's structure follows:
+1. Importing all required functions, initialising HelioSoil instances and choosing the plant layout.
+2. Calculating a value of hrz0 from the experimental data found in the Training Data folder. 
+3. Finding the tilt angles for the heliostats across the entire timeframe.
+4. Finding the equivalent soiling area increase from the panel tilts calculated, including a chosen cleaning frequency.
+5. Plotting the cumulative soiling of the heliostats across the year.
+6. Saving all these results in a csv file.
+"""
 #%%
 # Initialisation...
-"""
-
-"""
-
 # Getting the current directory's location
 import os
 import sys
@@ -65,7 +73,8 @@ print()
 
 # %%
 # Computing hrz0 from data
-
+# The code below is largely taken from the HelioSoil Repository. Visit the HelioSoil repository, and the wodonga_analysis.py script
+# for more information. 
 reflectometer_incidence_angle = 15       # Angle of incidence of reflectometer
 reflectometer_acceptance_angle = 12.5e-3 # Half acceptance angle of reflectance measurements
 second_surf = True                       # True if using the second-surface model. Otherwise, use first-surface
@@ -201,7 +210,7 @@ nominal_reflectance = 1.0
 # Using HelioSoil to set up and simulate the soiling of the solar field.
 physical_model.helios.tilt = {0: np.rad2deg(tilt_angles_rad)}                                    # Inputting the tilt angles calculated from the entire year.
 physical_model.helios.compute_extinction_weights(sim_data, loss_model="geometry", verbose=False) # Computing the optical extinction weights.
-physical_model.deposition_flux(sim_data, hrz0=physical_model.hrz0, verbose=False)                # Computing the deposition flux, to populate the pdfqN?
+physical_model.deposition_flux(sim_data, hrz0=physical_model.hrz0, verbose=False)                # Computing the deposition flux, to populate the pdfqN.
 physical_model.calculate_delta_soiled_area(sim_data, sigma_dep=sigma_dep, verbose=False)         # Computing the change in soiled area.
 delta_soiled_area = physical_model.helios.delta_soiled_area[0]
 

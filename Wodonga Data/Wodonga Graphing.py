@@ -1,4 +1,7 @@
-
+"""
+This script takes the data produced both by the ray tracing and soiling analysis scripts and provides a space where the data can
+be analysed and visulised. 
+"""
 #%% 
 # Importing Modules...
 
@@ -15,7 +18,7 @@ df_soiled_data = pd.read_csv(csv_path)
 csv_path = os.path.join(current_directory, "Wodonga Data\\Wodonga Raytrace Results.csv")
 df_raytrace_results = pd.read_csv(csv_path)
 
-# Extracting the data from the csv file created in Soiled LFR Plant Simulation.py
+# Extracting the data from the csv file created in Wodonga Plant Soiling Analysis.py
 azimuths_deg = df_soiled_data['Azimuth [deg]'].to_numpy()
 azimuths_rad = np.deg2rad(azimuths_deg)
 elevations_deg = df_soiled_data['Elevation [deg]'].to_numpy()
@@ -36,14 +39,14 @@ tilts_deg = df_soiled_data[tilt_header_list].to_numpy().T
 tilts_rad = np.deg2rad(tilts_deg)
 reflectances = df_soiled_data[reflectance_header_list].to_numpy().T
 
-# Extracting the data from the csv file created in Year-Long Raytracing Simulation.py
+# Extracting the data from the csv file created in Wodonga Ray Tracing.py
 uncorrected_efficiencies = df_raytrace_results["Uncorrected efficiency"].to_numpy()
 corrected_efficiencies = df_raytrace_results["Corrected efficiency"].to_numpy()
 
 #%% 
 # Manipulating data...
 
-# As the efficiency has been calculated for each hour of the year, it is broken down into blocks of 24,
+# As the efficiency has been calculated for every 5 minutes, it is broken down into blocks of 288,
 # and the peak efficiency is found from each block. This represents the highest efficiency out of the 24 hour period.
 days = [uncorrected_efficiencies[i:i + 288] for i in range(0, len(uncorrected_efficiencies), 288)]
 peak_efficiencies = []
