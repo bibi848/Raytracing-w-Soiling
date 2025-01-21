@@ -52,7 +52,7 @@ To find the efficiency of a specific LFR plant setup outlined in `CSV Files/Simu
 <br><br>
 ## Citation & Contact
 If you would like to use any resources that are present in this repository please cite using
-* fill in citation
+* Oscar Djuric. Raytracing-w-Soiling. GitHub repository, 2025. https://github.com/bibi848/Raytracing-w-Soiling
 
 If you would like to contact me with any professional questions surrounding this repository please email oscar.djuric@gmail.com
 
