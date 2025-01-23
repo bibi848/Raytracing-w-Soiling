@@ -1,7 +1,6 @@
 # Optical and Geometrical Setup for PySolTrace
 
 from pysoltrace import Point
-from raytracing_soiling_functions import find_normal
 import numpy as np
 
 

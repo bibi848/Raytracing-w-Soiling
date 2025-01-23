@@ -40,66 +40,96 @@ for i in range(num_heliostats):
     reflectance_header_list.append(reflectance_header)
 
 tilts_deg = df_soiled_data[tilt_header_list].to_numpy().T
-tilts_rad = np.deg2rad(tilts_deg)
 reflectances = df_soiled_data[reflectance_header_list].to_numpy().T
 
 # Extracting the data from the csv file created in Wodonga Ray Tracing.py
 uncorrected_efficiencies = df_raytrace_results["Uncorrected efficiency"].to_numpy()
 corrected_efficiencies = df_raytrace_results["Corrected efficiency"].to_numpy()
-
 uncorrected_efficiencies_clean = df_raytrace_results_clean["Uncorrected efficiency"].to_numpy()
 corrected_efficiencies_clean = df_raytrace_results_clean["Corrected efficiency"].to_numpy()
+
+# Removing all zero efficiency values (night-time)
+uncorrected_efficiencies_no_zeroes = uncorrected_efficiencies[uncorrected_efficiencies != 0]
+corrected_efficiencies_no_zeroes = corrected_efficiencies[corrected_efficiencies != 0]
+corrected_efficiencies_clean_no_zeroes = corrected_efficiencies_clean[corrected_efficiencies_clean != 0]
+uncorrected_efficiencies_clean_no_zeroes = uncorrected_efficiencies_clean[uncorrected_efficiencies_clean != 0]
 #%% 
 # Manipulating data...
 
-# As the efficiency has been calculated for every 5 minutes, it is broken down into blocks of 288,
-# and the peak efficiency is found from each block. This represents the highest efficiency out of the 24 hour period.
-days = [uncorrected_efficiencies[i:i + 288] for i in range(0, len(uncorrected_efficiencies), 288)]
-peak_efficiencies = []
-avg_efficiencies = []
-for day in days:
-    peak_efficiencies.append(max(day))
-    avg_efficiencies.append(np.mean(day))
-
-peak_efficiency_times = []
-for i in range(len(peak_efficiencies)):
-    peak_efficiency_times.append(i*288)
-
-days_corrected = [corrected_efficiencies[i:i + 288] for i in range(0, len(corrected_efficiencies), 288)]
-peak_c_efficiencies = []
-avg_c_efficiencies = []
-for day in days_corrected:
-    peak_c_efficiencies.append(max(day))
-    avg_c_efficiencies.append(np.mean(day))
-
-peak_efficiencies_clean = []
-avg_efficiencies_clean = []
-days_clean = [uncorrected_efficiencies_clean[i:i + 288] for i in range(0, len(uncorrected_efficiencies_clean), 288)]
-for day in days_clean:
-    peak_efficiencies_clean.append(max(day))
-    avg_efficiencies_clean.append(np.mean(day))
-
-peak_c_efficiencies_clean = []
-avg_c_efficiencies_clean = []
-days_c_clean = [corrected_efficiencies_clean[i:i + 288] for i in range(0, len(corrected_efficiencies_clean), 288)]
-for day in days_c_clean:
-    peak_c_efficiencies_clean.append(max(day))
-    avg_c_efficiencies_clean.append(np.mean(day))
-
-# For each hour of the year, the average reflectance of the n heliostats is found. 
-# This can represent the overall soiling effect on the whole field.
+# Average Field Reflectance
 avg_reflectances = []
 for i in range(num_timesteps):
     avg = []
     for p in range(num_heliostats):
         avg.append(reflectances[p][i])
-    avg_reflectances.append(sum(avg)/len(avg))
+    avg_reflectances.append(sum(avg) / len(avg))
 
-# Manipulating all data to remove 0 efficiency values (removing nightime values)
-uncorrected_efficiencies_no_zeroes = uncorrected_efficiencies[uncorrected_efficiencies != 0]
-corrected_efficiencies_no_zeroes = corrected_efficiencies[corrected_efficiencies != 0]
-corrected_efficiencies_clean_no_zeroes = corrected_efficiencies_clean[corrected_efficiencies_clean != 0]
-uncorrected_efficiencies_clean_no_zeroes = uncorrected_efficiencies_clean[uncorrected_efficiencies_clean != 0]
+# As the efficiency has been calculated for every 5 minutes, it is broken down into blocks of 288, which represent 24 hour periods.
+efficiency_data_length = len(uncorrected_efficiencies)
+efficiency_data_length_no_zeroes = len(uncorrected_efficiencies_no_zeroes)
+full_day_sample_number = (24 * 60) / 5  # Number of minutes in a full 24 hour period, divided by the sample time step (5 minutes)
+x_shift = num_timesteps / int(full_day_sample_number)
+
+c_efficiencies_full = []
+uc_efficiencies_full = []
+c_efficiencies_full_clean = []
+uc_efficiencies_full_clean = []
+
+c_efficiencies_day = []
+uc_efficiencies_day = []
+c_efficiencies_day_clean = []
+uc_efficiencies_day_clean = []
+
+for i in range(len(df_raytrace_results["Corrected efficiency"])):
+
+    c_efficiency = df_raytrace_results["Corrected efficiency"][i]
+    uc_efficiency = df_raytrace_results["Uncorrected efficiency"][i]
+    c_efficiency_clean = df_raytrace_results_clean["Corrected efficiency"][i]
+    uc_efficiency_clean = df_raytrace_results_clean["Uncorrected efficiency"][i]
+
+    if c_efficiency != 0:
+
+        c_efficiencies_day.append(c_efficiency)
+        uc_efficiencies_day.append(uc_efficiency)
+        c_efficiencies_day_clean.append(c_efficiency_clean)
+        uc_efficiencies_day_clean.append(uc_efficiency_clean)
+
+        if i < len(df_raytrace_results["Corrected efficiency"])-1 and df_raytrace_results["Corrected efficiency"][i+1] < 0.01:
+
+            c_efficiencies_full.append(c_efficiencies_day)
+            uc_efficiencies_full.append(uc_efficiencies_day)
+            c_efficiencies_full_clean.append(c_efficiencies_day_clean)
+            uc_efficiencies_full_clean.append(uc_efficiencies_day_clean)
+
+            c_efficiencies_day = []
+            uc_efficiencies_day = []
+            c_efficiencies_day_clean = []
+            uc_efficiencies_day_clean = []
+
+c_efficiencies_avg = []
+uc_efficiencies_avg = []
+c_efficiencies_avg_clean = []
+uc_efficiencies_avg_clean = []
+
+c_efficiencies_peak = []
+uc_efficiencies_peak = []
+c_efficiencies_peak_clean = []
+uc_efficiencies_peak_clean = []
+
+for i in range(len(c_efficiencies_full)):
+    c_efficiencies_avg.append(np.mean(c_efficiencies_full[i]))
+    uc_efficiencies_avg.append(np.mean(uc_efficiencies_full[i]))
+    c_efficiencies_avg_clean.append(np.mean(c_efficiencies_full_clean[i]))
+    uc_efficiencies_avg_clean.append(np.mean(uc_efficiencies_full_clean[i]))
+
+    c_efficiencies_peak.append(max(c_efficiencies_full[i]))
+    uc_efficiencies_peak.append(max(uc_efficiencies_full[i]))
+    c_efficiencies_peak_clean.append(max(c_efficiencies_full_clean[i]))
+    uc_efficiencies_peak_clean.append(max(uc_efficiencies_full_clean[i]))
+
+t_avg_peak = []
+for i in range(len(c_efficiencies_peak)):
+    t_avg_peak.append(i*full_day_sample_number)
 
 #%%
 # Plotting data...
@@ -127,39 +157,15 @@ ax1.set_ylabel("Average Reflectance", color="blue")
 ax1.set_title('Comparing the Average Field Reflectance to the Peak Efficiencies')
 ax1.tick_params(axis="y", labelcolor="blue")
 
-ax2 = ax1.twinx()  
-ax2.plot(peak_efficiency_times, peak_efficiencies, color="red", label="Uncorrected")
-ax2.plot(peak_efficiency_times, peak_c_efficiencies, color="green", label="Corrected")
+ax2 = ax1.twinx()
+ax2.plot(t_avg_peak, uc_efficiencies_peak, color="red", label="Uncorrected")
+ax2.plot(t_avg_peak, c_efficiencies_peak, color="green", label="Corrected")
 ax2.set_ylabel("Peak Efficiency (per day)", color="black")
 ax2.tick_params(axis="y", labelcolor="black")
 ax2.legend(loc='lower right')
 ax1.grid(True)
 plt.show()
 
-# Plant Efficiency Over a 24 Hour Period
-fig, ax1 = plt.subplots(figsize=(12, 6))
-ax1.plot(t[:288], uncorrected_efficiencies[:288], color="red", label = 'Uncorrected')
-ax1.plot(t[:288], corrected_efficiencies[:288], color="green", label = 'Corrected')
-ax1.set_xlabel("Time")
-ax1.set_ylabel("Efficiency Across 24 Hour Period", color="black")
-ax1.set_title('Plant Efficiency Over a 24 Hour Period')
-ax1.tick_params(axis="y", labelcolor="black")
-ax1.legend()
-ax1.grid(True)
-plt.show()
-
-fig, ax1 = plt.subplots(figsize=(12, 6))
-ax1.plot(t[2812:3388], uncorrected_efficiencies[2812:3388], color="red", label = 'Uncorrected')
-ax1.plot(t[2812:3388], corrected_efficiencies[2812:3388], color="green", label = 'Corrected')
-ax1.set_xlabel("Time")
-ax1.set_ylabel("Efficiency", color="black")
-ax1.set_title('Resolution of Data Strongly Affecting Mean Calculations')
-ax1.tick_params(axis="y", labelcolor="black")
-ax1.legend()
-ax1.grid(True)
-plt.show()
-
-# Average efficiencies instead of peak
 fig, ax1 = plt.subplots(figsize=(12, 6))
 ax1.plot(t, avg_reflectances, color="blue", label="Average Reflectances")
 ax1.set_xlabel("Time")
@@ -168,8 +174,8 @@ ax1.set_title('Comparing the Average Field Reflectance to the Avg Efficiencies')
 ax1.tick_params(axis="y", labelcolor="blue")
 
 ax2 = ax1.twinx()  
-ax2.plot(peak_efficiency_times, avg_efficiencies, color="red", label="Uncorrected")
-ax2.plot(peak_efficiency_times, avg_c_efficiencies, color="green", label="Corrected")
+ax2.plot(t_avg_peak, uc_efficiencies_avg, color="red", label="Uncorrected")
+ax2.plot(t_avg_peak, c_efficiencies_avg, color="green", label="Corrected")
 ax2.set_ylabel("Average Efficiency (per 24 hour period)", color="black")
 ax2.tick_params(axis="y", labelcolor="black")
 ax2.legend(loc='lower right')
@@ -178,8 +184,8 @@ plt.show()
 
 # Comparing corrected clean and corrected dirty
 fig, ax1 = plt.subplots(figsize=(12, 6))
-ax1.plot(peak_efficiency_times, avg_c_efficiencies_clean, color="blue", label="Clean Avg Efficiencies")
-ax1.plot(peak_efficiency_times, avg_c_efficiencies, color = 'red', label = 'Soiled Avg Efficiencies')
+ax1.plot(t_avg_peak, c_efficiencies_avg_clean, color="blue", label= "Clean Avg Efficiencies")
+ax1.plot(t_avg_peak, c_efficiencies_avg, color = 'red', label = 'Soiled Avg Efficiencies')
 ax1.set_xlabel("Time")
 ax1.set_ylabel("Average Efficiency")
 ax1.set_title('Comparing Average Field Efficiencies between Soiled and Clean Simulations')
@@ -188,8 +194,8 @@ ax1.grid(True)
 plt.show()
 
 fig, ax1 = plt.subplots(figsize=(12, 6))
-ax1.plot(peak_efficiency_times, peak_c_efficiencies_clean, color="blue", label="Clean Peak Efficiencies")
-ax1.plot(peak_efficiency_times, peak_c_efficiencies, color = 'red', label = 'Soiled Peak Efficiencies')
+ax1.plot(t_avg_peak, c_efficiencies_peak_clean, color="blue", label="Clean Peak Efficiencies")
+ax1.plot(t_avg_peak, c_efficiencies_peak, color = 'red', label = 'Soiled Peak Efficiencies')
 ax1.set_xlabel("Time")
 ax1.set_ylabel("Peak Efficiency")
 ax1.set_title('Comparing Peak Field Efficiencies between Soiled and Clean Simulations')
@@ -199,8 +205,8 @@ plt.show()
 
 # Plant Efficiency Over a 24 Hour Period - Clean vs Soiled
 fig, ax1 = plt.subplots(figsize=(12, 6))
-ax1.plot(t[67550:68050], corrected_efficiencies_clean[67550:68050], color="red", label = 'Clean')
-ax1.plot(t[67550:68050], corrected_efficiencies[67550:68050], color="green", label = 'Soiled')
+ax1.plot(t[67700:67950], corrected_efficiencies_clean[67700:67950], color="red", label = 'Clean')
+ax1.plot(t[67700:67950], corrected_efficiencies[67700:67950], color="green", label = 'Soiled')
 ax1.set_xlabel("Time")
 ax1.set_ylabel("Efficiency", color="black")
 ax1.set_title('Comparing Soiled vs Clean Efficiencies throughout the Day')
@@ -208,39 +214,4 @@ ax1.tick_params(axis="y", labelcolor="black")
 ax1.legend()
 ax1.grid(True)
 plt.show()
-
-#%%
-# Plotting data which has had all nighttime values removed
-t_no_zeroes = np.arange(len(uncorrected_efficiencies_clean_no_zeroes))
-fig, ax1 = plt.subplots(figsize=(12, 6))
-ax1.plot(t_no_zeroes, corrected_efficiencies_clean_no_zeroes, color="blue", label="Clean Efficiencies")
-ax1.plot(t_no_zeroes, corrected_efficiencies_no_zeroes, color = 'red', label = 'Soiled Efficiencies')
-ax1.set_xlabel("Time")
-ax1.set_ylabel("Efficiencies")
-ax1.set_title('Comparing Field Efficiencies between Soiled and Clean Simulations')
-ax1.legend()
-ax1.grid(True)
-plt.show()
-
-avg_c_efficiencies_clean_no_zeroes = []
-days = [corrected_efficiencies_clean_no_zeroes[i:i + 288] for i in range(0, len(corrected_efficiencies_clean_no_zeroes), 288)]
-for day in days:
-    avg_c_efficiencies_clean_no_zeroes.append(np.mean(day))
-avg_c_efficiencies_no_zeroes = []
-days = [corrected_efficiencies_no_zeroes[i:i + 288] for i in range(0, len(corrected_efficiencies_clean_no_zeroes), 288)]
-for day in days:
-    avg_c_efficiencies_no_zeroes.append(np.mean(day))
-
-t_no_zeroes_avg = np.arange(len(avg_c_efficiencies_no_zeroes))
-fig, ax1 = plt.subplots(figsize=(12, 6))
-ax1.plot(t_no_zeroes_avg, avg_c_efficiencies_clean_no_zeroes, color="blue", label="Clean Avg Efficiencies")
-ax1.plot(t_no_zeroes_avg, avg_c_efficiencies_no_zeroes, color = 'red', label = 'Soiled Avg Efficiencies')
-ax1.set_xlabel("Time")
-ax1.set_ylabel("Efficiencies")
-ax1.set_title('Comparing Avg Field Efficiencies between Soiled and Clean Simulations')
-ax1.legend()
-ax1.grid(True)
-plt.show()
-
-
 # %%

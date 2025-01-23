@@ -1,3 +1,5 @@
+#%%
+# Initialisation...
 """
 Integrating the soiling model from HelioSoil to the LFR plant design in Wodonga.
 This script generates a csv file containing information about the tilts of the heliostats along with their respective
@@ -10,8 +12,6 @@ The script's structure follows:
 5. Plotting the cumulative soiling of the heliostats across the year.
 6. Saving all these results in a csv file.
 """
-#%%
-# Initialisation...
 # Getting the current directory's location
 import os
 import sys
@@ -230,13 +230,14 @@ reflectance = np.zeros_like(delta_soiled_area)
 for i in range(num_heliostats):
     for t in range(1, num_timesteps):
         cumulative_soiled_area[i,t] = cumulative_soiled_area[i, t-1] + delta_soiled_area[i, t]
+        # cumulative_soiled_area[i, t] = 0
 
-        # # Constant cleaning Frequency
+        # Constant cleaning Frequency
         # if t % cleaning_frequency == 0:
         #     cumulative_soiled_area[i,t] = 0
 
         # Conditional Cleaning Frequency
-        if (calc_reflectance(nominal_reflectance, cumulative_soiled_area[i,t], incidence_angles_rad[i,t])) < 0.8:
+        if (calc_reflectance(nominal_reflectance, cumulative_soiled_area[i,t], incidence_angles_rad[i,t])) < 0.65:
             cumulative_soiled_area[i,t] = 0
 
         reflectance[i,t] = calc_reflectance(nominal_reflectance, cumulative_soiled_area[i,t], incidence_angles_rad[i,t])
