@@ -14,19 +14,21 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 import datetime as dt
+import time
+import copy
 
-all_data = pd.read_excel(wodonga_directory + "\\ALL_DATA_WODONGA.xlsx")
+all_data_t1 = pd.read_excel(wodonga_directory + "\\ALL_DATA_WODONGA.xlsx")
 # all_data = pd.read_excel(wodonga_directory + "\\test set.xlsx")
 
 # Only taking data we need to make computation faster
-Time_data = all_data["tmsmp"].reset_index(drop=True)
-AirTemp_data = all_data["M1_T1"].reset_index(drop=True)
-WindSpeed_data = all_data["M1_WS"].reset_index(drop=True)
-WindDir_data = all_data["M1_WD"].reset_index(drop=True)
-RH_data = all_data["M1_ppRH"].reset_index(drop=True)
-Rain_data = all_data["M1_P"].reset_index(drop=True)
-DewPoint_data = all_data["S_DP"].reset_index(drop=True)
-PM10_data = all_data["PM10"].reset_index(drop=True)
+Time_data = all_data_t1["tmsmp"].reset_index(drop=True)
+AirTemp_data = all_data_t1["M1_T1"].reset_index(drop=True)
+WindSpeed_data = all_data_t1["M1_WS"].reset_index(drop=True)
+WindDir_data = all_data_t1["M1_WD"].reset_index(drop=True)
+RH_data = all_data_t1["M1_ppRH"].reset_index(drop=True)
+Rain_data = all_data_t1["M1_P"].reset_index(drop=True)
+DewPoint_data = all_data_t1["S_DP"].reset_index(drop=True)
+PM10_data = all_data_t1["PM10"].reset_index(drop=True)
 data_length = len(Time_data)
 
 Wetbulb_data = pd.Series(0, index=range(data_length))
@@ -47,7 +49,7 @@ data_dict = {
     "DNI" : DNI_data
 }
 
-all_data = pd.DataFrame(data_dict)
+all_data_t2 = pd.DataFrame(data_dict)
 #%%
 # Functions for data refactoring...
 
@@ -61,9 +63,7 @@ def fill_gap(index, all_data, time_diff, middle_time):
     return interpolated_results
 
 def round_timestamp(timestamp):
-    rounded_timestamp = timestamp - pd.Timedelta(minutes=timestamp.minute % 5,
-                                              seconds=timestamp.second,
-                                              microseconds=timestamp.microsecond)
+    rounded_timestamp = timestamp - pd.Timedelta(minutes=timestamp.minute % 5, seconds=timestamp.second, microseconds=timestamp.microsecond)
     if timestamp.minute % 5 >= 3:
         rounded_timestamp += pd.Timedelta(minutes=5)
     return rounded_timestamp
@@ -74,6 +74,19 @@ def check_5_minute_interval(timestamp, counter):
         return round_timestamp(timestamp), counter
     else:
         return timestamp, counter
+
+#%%
+# Filling 2 month gap with previous data
+# No data is available between 2022-05-20 14:45:00 (103081) and 2022-08-09 10:05:46 (103082).
+# Will be replaced by 2021-05-20 14:45:00 (11) and 2021-08-09 10:05:00 (21583)
+
+filler_data = copy.deepcopy(all_data_t2.iloc[12:21583])
+filler_data.loc[:, 'Time'] = filler_data['Time'].apply(lambda x: x.replace(year=2022))
+
+all_data_part1 = all_data_t2.iloc[:103082]
+all_data_part2 = all_data_t2.iloc[103082:]
+all_data = pd.concat([all_data_part1, filler_data, all_data_part2], ignore_index = True)
+print('Two month gap has been filled')
 
 #%%
 # Remove all data to first instance of midnight
@@ -98,15 +111,17 @@ print(incorrect_times, 'times were not in 5 minute intervals')
 gaps_filled = 0
 i = 0
 while i < len(all_data["Time"]):
-
     if i != len(all_data["Time"])-1:
 
         current_time = all_data["Time"][i]
         next_time = all_data["Time"][i+1]
         time_diff = (next_time - current_time)
-        middle_time = round_timestamp(current_time + (next_time - current_time) / 2)
 
         if time_diff.total_seconds() != 300.0:
+            print(current_time)
+
+            middle_time = round_timestamp(current_time + (next_time - current_time) / 2)
+
             gaps_filled += 1
             interpolated_results = fill_gap(i, all_data, time_diff.total_seconds(), middle_time)
 
@@ -120,7 +135,7 @@ while i < len(all_data["Time"]):
             
     i += 1
 
-print(gaps_filled,'gaps were filled')
+print(gaps_filled,'gaps were filled by interpolation')
 
 # %%
 # Getting Dust sheet from Woomera Data
