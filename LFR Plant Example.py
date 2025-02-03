@@ -13,9 +13,11 @@ import pysolar.solar as solar
 from pysoltrace import PySolTrace, Point
 import datetime as dt
 from datetime import datetime
-import pysolar.radiation as radiation
 import warnings
 warnings.filterwarnings("ignore", message="no explicit representation of timezones available for np.datetime64")
+
+from pvlib.location import Location
+from pvlib.clearsky import ineichen
 
 from raytracing_soiling_functions import calculate_theta_aim
 from raytracing_soiling_functions import calculate_tilt
@@ -34,7 +36,7 @@ from optical_geometrical_setup import sample_CPC
 from optical_geometrical_setup import CPC_positioning
 
 # Importing plant parameters
-current_script_path = os.path.abspath(__file__)           
+current_script_path = os.path.abspath(__file__)
 current_directory = os.path.dirname(current_script_path)  
 csv_path = os.path.join(current_directory, "CSV Files/Simulation Parameters.csv")
 lat, lon, hour_offset, receiver_height, receiver_length, receiver_diameter, panel_length, panel_width, panel_height, panel_spacing, panels_min_max, slope_error, specularity_error, CPC_depth, aperture_angle = import_simulation_parameters(pd.read_csv(csv_path))
@@ -43,6 +45,9 @@ lat, lon, hour_offset, receiver_height, receiver_length, receiver_diameter, pane
 # Location is Woomera and the date is set as 01/04/2018 at 11:00. This can be changed to any date.
 timezoneOffset = dt.timedelta(hours = hour_offset)
 date = datetime(2018, 4, 1, hour=11, minute=0, second=0, tzinfo=dt.timezone(timezoneOffset))
+location = Location(lat, lon, dt.timezone(timezoneOffset), 0)
+clear_sky = location.get_clearsky(pd.DatetimeIndex([date]), model = 'ineichen')
+DNI = clear_sky['dni'].values[0]
 
 # Plant layout
 receiver_position = [0, 0, receiver_height]
@@ -65,7 +70,6 @@ elevation_deg = solar.get_altitude(lat,lon,date)
 azimuth_deg = solar.get_azimuth(lat,lon,date) 
 zenith_deg = 90 - elevation_deg  
 elevation_rad, azimuth_rad, zenith_rad = (np.deg2rad(x) for x in [elevation_deg, azimuth_deg, zenith_deg])
-solar_radiation = radiation.get_radiation_direct(date,elevation_deg)
 
 # Describing the sun's position in terms of the azimuth and zenith. The full breakdown for this result is shown in
 # Aiming Strategy for LFRs document. 
@@ -123,7 +127,6 @@ CPC_positioning(stg2, optics_cover, panel_length, sample_points_x, sample_points
 stg3 = PT.add_stage()
 stg3.name = 'Stage 3: Heliostats'
 stg3.position = Point(0,0,0)
-tilt_list =[]
 for p in range(len(panel_positions)):
     optics_heliostat_p = op_heliostat_surface(PT, slope_error, specularity_error, 1, p)
 
@@ -131,7 +134,6 @@ for p in range(len(panel_positions)):
     # From the relative positions of the panel to the receiver, the panel's tilt and normal are calculated.
     theta_aim = calculate_theta_aim(Xaim=receiver_position[0], Zaim=receiver_position[2], X0=heliostat_position[0], Z0=heliostat_position[2])
     tilt = calculate_tilt(theta_T, theta_aim)
-    tilt_list.append(tilt)
     panel_normal = calculate_panel_normal(tilt)
 
     el3 = stg3.add_element()
@@ -166,7 +168,7 @@ PT.num_ray_hits = 1e5
 PT.max_rays_traced = PT.num_ray_hits*100
 PT.is_sunshape = True
 PT.is_surface_errors = True
-PT.dni= 1000
+PT.dni= DNI
 
 # When ray data is extracted, the in-built multithreading cannot be used.
 PT.run(-1,False)
@@ -206,6 +208,7 @@ IAM = eta_opt_corrected/eta_opt_zero
 print()
 print('The sun is at an azimuth of', round(azimuth_deg), 'and a zenith of', round(zenith_deg))
 print("Number of rays traced: {:d}".format(PT.raydata.index.size))
+print(f"Current DNI: {DNI:.2f} W/m2")
 print()
 print('Number of rays hitting,')
 print('Fictitious surface:', fictitious_df)

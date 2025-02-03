@@ -32,6 +32,9 @@ import datetime as dt
 from datetime import datetime, timezone, timedelta
 from copy import deepcopy
 
+from pvlib.location import Location
+from pvlib.clearsky import ineichen
+
 import soiling_model.base_models as smb
 import soiling_model.fitting as smf
 import soiling_model.utilities as smu
@@ -43,7 +46,7 @@ from raytracing_soiling_functions import find_normal
 
 # LFR Plant Setup 
 csv_path = os.path.join(wodonga_path, "Wodonga Simulation Parameters.csv")
-lat, lon, hour_offset, receiver_height, receiver_length, receiver_diameter, panel_length, panel_width, panel_height, panel_spacing, panels_min_max, slope_error, specularity_error, PSR_divisions, PSR_focal_length, PSR_diameter = import_simulation_parameters(pd.read_csv(csv_path))
+lat, lon, hour_offset, receiver_height, receiver_length, receiver_diameter, panel_length, panel_width, panel_height, panel_spacing, panels_min_max, slope_error, specularity_error, CPC_depth, aperture_angle = import_simulation_parameters(pd.read_csv(csv_path))
 receiver_position = [0, 0, receiver_height]
 panel_positions = np.arange(panels_min_max[0], panels_min_max[1], panel_width + panel_spacing) 
 num_heliostats = len(panel_positions)                                
@@ -70,6 +73,14 @@ physical_model.longitude = lon
 physical_model.import_site_data_and_constants(file_params)
 print('Initialisation Done')
 print()
+
+#%%
+# Finding the DNI for every hour of the year
+timezoneOffset = dt.timedelta(hours = hour_offset)
+location = Location(lat, lon, dt.timezone(timezoneOffset), 0)
+times = pd.date_range(start='2021-05-21', end='2023-02-16 11:35:00', freq='5T', tz=dt.timezone(timezoneOffset))
+clear_sky = location.get_clearsky(times, model = 'ineichen')
+DNI = list(clear_sky['dni'])
 
 # %%
 # Computing hrz0 from data
@@ -279,10 +290,11 @@ plt.show()
 filepath = wodonga_path + "\\Wodonga Soiled Data.csv"
 
 data = {
-    "Date" : Time_data,
-    "Azimuth [deg]" : azimuth_angles_deg,
+    "Date"            : Time_data,
+    "Azimuth [deg]"   : azimuth_angles_deg,
     "Elevation [deg]" : elevation_angles_deg,
-    "Theta T [rad]" : transversal_angles,
+    "DNI [W/m2]"      : DNI,
+    "Theta T [rad]"   : transversal_angles,
 }
 
 # The 3 for loops below append the heliostat tilts, hourly changes in soiled area, and cumulative soiled area for 

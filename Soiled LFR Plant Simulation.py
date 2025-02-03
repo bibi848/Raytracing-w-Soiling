@@ -30,6 +30,9 @@ import pysolar.solar as solar
 import datetime as dt
 from datetime import datetime, timedelta
 
+from pvlib.location import Location
+from pvlib.clearsky import ineichen
+
 import soiling_model.base_models as smb
 
 from raytracing_soiling_functions import calculate_theta_aim
@@ -39,7 +42,7 @@ from raytracing_soiling_functions import find_normal
 
 # LFR Plant Setup 
 csv_path = os.path.join(current_directory, "CSV Files/Simulation Parameters.csv")
-lat, lon, hour_offset, receiver_height, receiver_length, receiver_diameter, panel_length, panel_width, panel_height, panel_spacing, panels_min_max, slope_error, specularity_error, PSR_divisions, PSR_focal_length, PSR_diameter = import_simulation_parameters(pd.read_csv(csv_path))
+lat, lon, hour_offset, receiver_height, receiver_length, receiver_diameter, panel_length, panel_width, panel_height, panel_spacing, panels_min_max, slope_error, specularity_error, CPC_depth, aperture_angle = import_simulation_parameters(pd.read_csv(csv_path))
 receiver_position = [0, 0, receiver_height]
 panel_positions = np.arange(panels_min_max[0], panels_min_max[1], panel_width + panel_spacing) 
 num_heliostats = len(panel_positions)                                
@@ -59,7 +62,7 @@ print()
 # Generating the datetime list
 # Adding datetime objects every hour between the start and end date to datetime_list
 print('Generating Datetime list...')
-timezoneOffset = dt.timedelta(hours = 9.5)
+timezoneOffset = dt.timedelta(hours = hour_offset)
 start_date = datetime(2018, 1, 1, hour=0, minute=0, second=0, tzinfo=dt.timezone(timezoneOffset))
 end_date = datetime(2018, 12, 31, hour=23, minute=0, second=0, tzinfo=dt.timezone(timezoneOffset))
 datetime_list = []
@@ -69,6 +72,14 @@ while date <= end_date:
     date += timedelta(hours=1)
 num_timesteps = len(datetime_list)
 print('Datetime list done')
+
+#%%
+# Finding the DNI for every hour of the year
+location = Location(lat, lon, dt.timezone(timezoneOffset), 0)
+times = pd.date_range(start='2018-01-01', end='2019-01-01', freq='1h', tz=dt.timezone(timezoneOffset))
+clear_sky = location.get_clearsky(times, model = 'ineichen')
+DNI = list(clear_sky['dni'])
+del DNI[-1]
 
 #%%
 # Finding the tilt angles for all heliostats across the whole year
@@ -192,6 +203,7 @@ data = {
     "Date" : datetime_list,
     "Azimuth [deg]" : azimuth_angles_deg,
     "Elevation [deg]" : elevation_angles_deg,
+    "DNI [W/m2]" : DNI,
     "Theta T [rad]" : transversal_angles,
 }
 

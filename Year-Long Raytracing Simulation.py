@@ -1,4 +1,3 @@
-
 """
 This script implements the soiled results from the csv file soiled_data.csv generated from "Soiled LFR Plant Simulation.py" into
 the raytracing simulation set up in LFR Plant Example.py. This allows the efficiency of the plant at each hour of the year to be 
@@ -31,7 +30,7 @@ df = pd.read_csv(csv_path)
 
 # LFR Plant Setup 
 csv_path = os.path.join(current_directory, "CSV Files/Simulation Parameters.csv")
-lat, lon, hour_offset, receiver_height, receiver_length, receiver_diameter, panel_length, panel_width, panel_height, panel_spacing, panels_min_max, slope_error, specularity_error, PSR_divisions, PSR_focal_length, PSR_diameter = import_simulation_parameters(pd.read_csv(csv_path))
+lat, lon, hour_offset, receiver_height, receiver_length, receiver_diameter, panel_length, panel_width, panel_height, panel_spacing, panels_min_max, slope_error, specularity_error, CPC_depth, aperture_angle = import_simulation_parameters(pd.read_csv(csv_path))
 receiver_position = [0, 0, receiver_height]
 panel_positions = np.arange(panels_min_max[0], panels_min_max[1], panel_width + panel_spacing) 
 num_heliostats = len(panel_positions)                                
@@ -52,6 +51,7 @@ elevations_deg = df['Elevation [deg]'].to_numpy()
 elevations_rad = np.deg2rad(elevations_deg)
 num_timesteps = len(df['Date'].to_numpy())
 transversal_angles = df['Theta T [rad]'].to_numpy()
+DNI_values = df['DNI [W/m2]'].to_numpy()
 
 tilt_header_list = []
 reflectance_header_list = []
@@ -83,6 +83,7 @@ def ray_trace(i):
         azimuth_rad = azimuths_rad[i]
         zenith_rad = np.pi/2 - elevations_rad[i]
         theta_T = transversal_angles[i]
+        DNI = DNI_values[i]
 
         # Describing the sun's position in terms of the azimuth and zenith. The full breakdown for this result is shown in
         # Aiming Strategy for LFRs document. 
@@ -158,7 +159,7 @@ def ray_trace(i):
         PT.max_rays_traced = PT.num_ray_hits*100
         PT.is_sunshape = True
         PT.is_surface_errors = True
-        PT.dni= 1000
+        PT.dni= DNI
 
         PT.run(-1,False)
 
