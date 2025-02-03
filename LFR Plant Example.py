@@ -28,14 +28,16 @@ from optical_geometrical_setup import op_heliostat_surface
 from optical_geometrical_setup import op_receiver_surface
 from optical_geometrical_setup import op_secondaryReflector_surface
 from optical_geometrical_setup import trapezoidal_secondary_reflector
-from optical_geometrical_setup import PSR_panel_positions
-from optical_geometrical_setup import PSR_PT_positioning
+
+from optical_geometrical_setup import design_secondary_concentrator
+from optical_geometrical_setup import sample_CPC
+from optical_geometrical_setup import CPC_positioning
 
 # Importing plant parameters
 current_script_path = os.path.abspath(__file__)           
 current_directory = os.path.dirname(current_script_path)  
 csv_path = os.path.join(current_directory, "CSV Files/Simulation Parameters.csv")
-lat, lon, hour_offset, receiver_height, receiver_length, receiver_diameter, panel_length, panel_width, panel_height, panel_spacing, panels_min_max, slope_error, specularity_error, PSR_divisions, PSR_focal_length, PSR_diameter = import_simulation_parameters(pd.read_csv(csv_path))
+lat, lon, hour_offset, receiver_height, receiver_length, receiver_diameter, panel_length, panel_width, panel_height, panel_spacing, panels_min_max, slope_error, specularity_error, CPC_depth, aperture_angle = import_simulation_parameters(pd.read_csv(csv_path))
 
 # Date and Location
 # Location is Woomera and the date is set as 01/04/2018 at 11:00. This can be changed to any date.
@@ -113,8 +115,9 @@ stg2.position = Point(0,0,0)
 optics_cover = op_cover_surface(PT, slope_error, specularity_error)
 # el2 = trapezoidal_secondary_reflector(stg2, optics_cover, receiver_height, receiver_length)
 
-mid_points_x, mid_points_y, sample_points_x, sample_points_y = PSR_panel_positions(PSR_divisions, PSR_focal_length, PSR_diameter, receiver_height)
-PSR_PT_positioning(stg2, optics_cover, panel_length, mid_points_x, mid_points_y, sample_points_x, sample_points_y)
+x, y = design_secondary_concentrator(aperture_angle, 3*np.pi/2-aperture_angle, receiver_diameter/2, n_thetas=100, clip_points=20)
+sample_points_x, sample_points_y, midpoints_x, midpoints_y = sample_CPC(x, -1*y, 12, receiver_height)
+CPC_positioning(stg2, optics_cover, panel_length, sample_points_x, sample_points_y, midpoints_x, midpoints_y)
 
 # Stage 3, Heliostats
 stg3 = PT.add_stage()
@@ -156,7 +159,7 @@ el4.aperture_singleax_curve(0, 0, receiver_length) # (inner coordinate of revolv
 optics_secondary = op_secondaryReflector_surface(PT, slope_error, specularity_error)
 
 # el4 = trapezoidal_secondary_reflector(stg4, optics_secondary, receiver_height, receiver_length)
-PSR_PT_positioning(stg4, optics_secondary, panel_length, mid_points_x, mid_points_y, sample_points_x, sample_points_y)
+CPC_positioning(stg4, optics_receiver, panel_length, sample_points_x, sample_points_y, midpoints_x, midpoints_y)
 
 # Simulation Parameters
 PT.num_ray_hits = 1e5

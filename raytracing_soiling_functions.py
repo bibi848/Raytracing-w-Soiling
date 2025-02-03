@@ -46,10 +46,8 @@ def import_simulation_parameters(dataframe):
     panel_positions = ast.literal_eval(num[10][1])
     slope_error = float(num[11][1])
     specularity_error = float(num[12][1])
-    PSR_divisions = int(num[13][1])
-    PSR_focal_length = float(num[14][1])
-    PSR_diameter = float(num[15][1])
+    CPC_depth = float(num[13][1])
+    aperture_angle = np.deg2rad(float(num[14][1]))
 
-
-    return lat, lon, timezoneOffset, receiver_height, receiver_length, receiver_diameter, panel_length, panel_width, panel_height, panel_spacing, panel_positions, slope_error, specularity_error, PSR_divisions, PSR_focal_length, PSR_diameter
+    return lat, lon, timezoneOffset, receiver_height, receiver_length, receiver_diameter, panel_length, panel_width, panel_height, panel_spacing, panel_positions, slope_error, specularity_error, CPC_depth, aperture_angle
 

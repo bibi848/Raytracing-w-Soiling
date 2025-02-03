@@ -156,7 +156,6 @@ print(f'\sigma_dep: {sigma_dep_mle:.2e} [{lower_ci[1]:.2e},{upper_ci[1]:.2e}] [p
 
 physical_model.hrz0 = hrz0_mle
 
-
 # %%
 # Finding the tilt angles for all the heliostats across the whole time frame
 print("Finding all heliostat tilts...")
