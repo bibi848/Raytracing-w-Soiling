@@ -75,12 +75,17 @@ print('Initialisation Done')
 print()
 
 #%%
-# Finding the DNI for every hour of the year
+# Finding the DNI for entire timeframe...
 timezoneOffset = dt.timedelta(hours = hour_offset)
 location = Location(lat, lon, dt.timezone(timezoneOffset), 0)
-times = pd.date_range(start='2021-05-21', end='2023-02-16 11:35:00', freq='5T', tz=dt.timezone(timezoneOffset))
+times = pd.date_range(start='2021-05-21', end='2023-02-16 11:35:00', freq='5min', tz=dt.timezone(timezoneOffset))
 clear_sky = location.get_clearsky(times, model = 'ineichen')
 DNI = list(clear_sky['dni'])
+
+# Finding sum of DNIs per day
+DNI_days = [sum(DNI[i:i+288]) for i in range(0, len(DNI), 288)]
+extend = len(DNI) - len(DNI_days)
+DNI_days.extend([0] * extend)
 
 # %%
 # Computing hrz0 from data
@@ -294,6 +299,7 @@ data = {
     "Azimuth [deg]"   : azimuth_angles_deg,
     "Elevation [deg]" : elevation_angles_deg,
     "DNI [W/m2]"      : DNI,
+    "DNI Sum Per Day" : DNI_days,
     "Theta T [rad]"   : transversal_angles,
 }
 

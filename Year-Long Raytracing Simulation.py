@@ -175,15 +175,17 @@ def ray_trace(i):
     
         if mirrors_hits != 0:
             eta_opt_rays = receiver_abs / mirrors_hits
+            DNI_corrected = eta_opt_rays * DNI
             eta_opt_corrected = receiver_abs * ppr_corrected / (PT.dni * A_aperture)
         else:
             eta_opt_rays = 0
             eta_opt_corrected = 0
+            DNI_corrected = 0
 
-        return [eta_opt_rays, eta_opt_corrected]
+        return [eta_opt_rays, eta_opt_corrected, DNI_corrected]
     
     else: # When the sun is below the horizon, the efficiency of the plant is 0.
-         return [0,0]
+         return [0,0,0]
 
 csv_data = {}
 
@@ -205,12 +207,15 @@ if __name__ == "__main__":
 
     uncorrected_efficiency = []
     corrected_efficiency = []
+    DNI_efficiency = []
     for i in range(len(data_multi)):
         uncorrected_efficiency.append(data_multi[i][0])
         corrected_efficiency.append(data_multi[i][1])
+        DNI_efficiency.append(data_multi[i][2])
 
     csv_data["Uncorrected efficiency"] = uncorrected_efficiency
     csv_data["Corrected efficiency"] = corrected_efficiency
+    csv_data["DNI corrected efficiency"] = DNI_efficiency
 
     df = pd.DataFrame(csv_data)
     df.to_csv(filepath, index = False)
