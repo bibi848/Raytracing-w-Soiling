@@ -32,6 +32,7 @@ from optical_geometrical_setup import trapezoidal_secondary_reflector
 from optical_geometrical_setup import design_secondary_concentrator
 from optical_geometrical_setup import sample_CPC
 from optical_geometrical_setup import CPC_positioning
+from optical_geometrical_setup import aperature_angle
 
 # Importing plant parameters
 current_script_path = os.path.abspath(__file__)           
@@ -57,11 +58,15 @@ x_shift = (panel_positions[0] + panel_positions[-1])/2 # As the solar field is n
 z_shift = panel_height/10 # Similarly to the x_shift, there is also a positional shift vertically from the height of the panels.
 
 aperture_angle = 1
+aw = 0.1
 efficiencies = []
 cor_efficiencies = []
 a_angles = []
 
-while aperture_angle < 150:
+while aw < 2:
+
+    theta_a, t = aperature_angle(aw, 0.11, receiver_diameter/2)
+
 
     # Create API class instance
     PT = PySolTrace()
@@ -89,8 +94,7 @@ while aperture_angle < 150:
     theta_T = np.arctan(sn[0]/sn[2])
     theta_L = np.arctan(sn[1]/sn[2])
 
-    print(aperture_angle)
-    a_rad = np.deg2rad(aperture_angle)
+    print(aw)
 
     # Stage 1, Fictitious Surface
     stg1 = PT.add_stage()
@@ -115,7 +119,7 @@ while aperture_angle < 150:
     stg2.position = Point(0,0,0)
     optics_cover = op_cover_surface(PT, slope_error, specularity_error)
 
-    x, y = design_secondary_concentrator(a_rad, 3*np.pi/2-a_rad, receiver_diameter/2, n_thetas=100, clip_points=20)
+    x, y = design_secondary_concentrator(theta_a, 3*np.pi/2-theta_a, receiver_diameter/2, n_thetas=100, clip_points=20)
     sample_points_x, sample_points_y, midpoints_x, midpoints_y = sample_CPC(x, -1*y, 12, receiver_height)
     CPC_positioning(stg2, optics_cover, panel_length, sample_points_x, sample_points_y, midpoints_x, midpoints_y)
 
@@ -202,11 +206,11 @@ while aperture_angle < 150:
     eta_opt_rays = receiver_abs / mirrors_hits
     IAM = eta_opt_corrected/eta_opt_zero
 
-    a_angles.append(aperture_angle)
+    a_angles.append(aw)
     efficiencies.append(eta_opt_rays)
     cor_efficiencies.append(eta_opt_corrected)
 
-    aperture_angle += 1
+    aw += 0.01
 
 
 
@@ -217,9 +221,9 @@ from scipy.optimize import bisect
 
 fig,ax = plt.subplots()
 
-ax.set_xlabel("Aperture Angle")
+ax.set_xlabel("Aperture Width")
 ax.set_ylabel("Efficiency")
 ax.plot(a_angles, efficiencies, color = 'red', label='Optical Efficiency')
-ax.plot(a_angles, cor_efficiencies, color = 'green', label = 'Corrected Efficiency')
+#ax.plot(a_angles, cor_efficiencies, color = 'green', label = 'Corrected Efficiency')
 ax.legend()
 # %%

@@ -7,7 +7,7 @@ be analysed and visulised.
 
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt 
 import os
 
 # Finding the script's directory to then find the data csv files produced in previous scripts.
@@ -69,12 +69,14 @@ uc_efficiencies_full = []
 D_efficiencies_full = []
 c_efficiencies_full_clean = []
 uc_efficiencies_full_clean = []
+D_efficiencies_full_clean = []
 
 c_efficiencies_day = []
 uc_efficiencies_day = []
 D_efficiencies_day = []
 c_efficiencies_day_clean = []
 uc_efficiencies_day_clean = []
+D_efficiencies_day_clean = []
 
 for i in range(len(df_raytrace_results["Corrected efficiency"])):
 
@@ -83,6 +85,7 @@ for i in range(len(df_raytrace_results["Corrected efficiency"])):
     D_efficiency = df_raytrace_results["DNI corrected efficiency"][i]
     c_efficiency_clean = df_raytrace_results_clean["Corrected efficiency"][i]
     uc_efficiency_clean = df_raytrace_results_clean["Uncorrected efficiency"][i]
+    D_efficiency_clean = df_raytrace_results_clean["DNI corrected efficiency"][i]
 
     if c_efficiency != 0:
 
@@ -91,6 +94,7 @@ for i in range(len(df_raytrace_results["Corrected efficiency"])):
         D_efficiencies_day.append(D_efficiency)
         c_efficiencies_day_clean.append(c_efficiency_clean)
         uc_efficiencies_day_clean.append(uc_efficiency_clean)
+        D_efficiencies_day_clean.append(D_efficiency_clean)
 
         if i < len(df_raytrace_results["Corrected efficiency"])-1 and df_raytrace_results["Corrected efficiency"][i+1] < 0.01:
 
@@ -99,24 +103,28 @@ for i in range(len(df_raytrace_results["Corrected efficiency"])):
             D_efficiencies_full.append(D_efficiencies_day)
             c_efficiencies_full_clean.append(c_efficiencies_day_clean)
             uc_efficiencies_full_clean.append(uc_efficiencies_day_clean)
+            D_efficiencies_full_clean.append(D_efficiencies_day_clean)
 
             c_efficiencies_day = []
             uc_efficiencies_day = []
             D_efficiencies_day = []
             c_efficiencies_day_clean = []
             uc_efficiencies_day_clean = []
+            D_efficiencies_day_clean = []
 
 c_efficiencies_avg = []
 uc_efficiencies_avg = []
 D_efficiencies_avg = []
 c_efficiencies_avg_clean = []
 uc_efficiencies_avg_clean = []
+D_efficiencies_avg_clean = []
 
 c_efficiencies_peak = []
 uc_efficiencies_peak = []
 D_efficiencies_peak = []
 c_efficiencies_peak_clean = []
 uc_efficiencies_peak_clean = []
+D_efficiencies_peak_clean = []
 
 for i in range(len(c_efficiencies_full)):
     c_efficiencies_avg.append(np.mean(c_efficiencies_full[i]))
@@ -124,6 +132,7 @@ for i in range(len(c_efficiencies_full)):
     D_efficiencies_avg.append(sum(D_efficiencies_full[i]) / DNI_day_sums[i])
     c_efficiencies_avg_clean.append(np.mean(c_efficiencies_full_clean[i]))
     uc_efficiencies_avg_clean.append(np.mean(uc_efficiencies_full_clean[i]))
+    D_efficiencies_avg_clean.append(sum(D_efficiencies_full_clean[i]) / DNI_day_sums[i])
 
     c_efficiencies_peak.append(max(c_efficiencies_full[i]))
     uc_efficiencies_peak.append(max(uc_efficiencies_full[i]))
@@ -143,8 +152,8 @@ for i in range(len(t_avg_peak)):
 # Plotting the change in heliostat reflectance over the year
 plt.figure(figsize=(12, 6))
 t = np.arange(num_timesteps)
-for i in range(len(t)):
-    t[i] = t[i] * (5/60)
+# for i in range(len(t)):
+#     t[i] = t[i] * (5/60)
 
 for i in range(num_heliostats):
     plt.plot(t, reflectances[i, :], label=f"Heliostat {i+1}", linewidth=1.5)
@@ -194,7 +203,6 @@ plt.show()
 fig, ax1 = plt.subplots(figsize=(12, 6))
 ax1.plot(t_avg_peak, c_efficiencies_avg_clean, color= 'blue', label= 'Clean Avg Efficiencies')
 ax1.plot(t_avg_peak, c_efficiencies_avg, color = 'red', label = 'Soiled Avg Efficiencies')
-ax1.plot(t_avg_peak, D_efficiencies_avg, color = 'green', label = 'DNI Corrected Efficiencies')
 ax1.axvline(8500, color = 'red', linestyle = ':', linewidth = 2)
 ax1.axvline(10500, color = 'red', linestyle = ':', linewidth = 2)
 ax1.set_xlabel("Time [Hours]")
@@ -214,16 +222,29 @@ ax1.legend()
 ax1.grid(True)
 plt.show()
 
+# DNI Weighted Efficiencies Comparison
 
-# Plant Efficiency Over a 24 Hour Period - Clean vs Soiled
 fig, ax1 = plt.subplots(figsize=(12, 6))
-ax1.plot(t[67700:67950], corrected_efficiencies_clean[67700:67950], color="red", label = 'Clean')
-ax1.plot(t[67700:67950], corrected_efficiencies[67700:67950], color="green", label = 'Soiled')
+ax1.plot(t_avg_peak, D_efficiencies_avg_clean, color = 'blue', label = 'Clean')
+ax1.plot(t_avg_peak, D_efficiencies_avg, color = 'red', label = 'Soiled')
+ax1.axvline(8500, color = 'red', linestyle = ':', linewidth = 2)
+ax1.axvline(10500, color = 'red', linestyle = ':', linewidth = 2)
 ax1.set_xlabel("Time [Hours]")
-ax1.set_ylabel("Efficiency", color="black")
-ax1.set_title('Comparing Soiled vs Clean Efficiencies throughout the Day')
-ax1.tick_params(axis="y", labelcolor="black")
+ax1.set_ylabel("Daily Average Efficiency")
+ax1.set_title('Comparing DNI Weighted Efficiencies')
 ax1.legend()
 ax1.grid(True)
 plt.show()
+
+# # Plant Efficiency Over a 24 Hour Period - Clean vs Soiled
+# fig, ax1 = plt.subplots(figsize=(12, 6))
+# ax1.plot(t[67700:67950], corrected_efficiencies_clean[67700:67950], color="red", label = 'Clean')
+# ax1.plot(t[67700:67950], corrected_efficiencies[67700:67950], color="green", label = 'Soiled')
+# ax1.set_xlabel("Time [Hours]")
+# ax1.set_ylabel("Efficiency", color="black")
+# ax1.set_title('Comparing Soiled vs Clean Efficiencies throughout the Day')
+# ax1.tick_params(axis="y", labelcolor="black")
+# ax1.legend()
+# ax1.grid(True)
+# plt.show()
 # %%
