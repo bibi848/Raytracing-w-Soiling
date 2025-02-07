@@ -27,7 +27,7 @@ elevations_deg = df_soiled_data['Elevation [deg]'].to_numpy()
 elevations_rad = np.deg2rad(elevations_deg)
 num_timesteps = len(df_soiled_data['Date'].to_numpy())
 
-num_heliostats = 11
+num_heliostats = 12
 
 tilt_header_list = []
 reflectance_header_list = []
@@ -42,15 +42,15 @@ tilts_rad = np.deg2rad(tilts_deg)
 reflectances = df_soiled_data[reflectance_header_list].to_numpy().T
 
 # Extracting the data from the csv file created in Year-Long Raytracing Simulation.py
-uncorrected_efficiencies = df_raytrace_results["Uncorrected efficiency"].to_numpy()
-corrected_efficiencies = df_raytrace_results["Corrected efficiency"].to_numpy()
+optical_efficiencies = df_raytrace_results["Optical efficiency"].to_numpy()
+field_efficiencies = df_raytrace_results["Field efficiency"].to_numpy()
 
 #%% 
 # Manipulating data...
 
 # As the efficiency has been calculated for each hour of the year, it is broken down into blocks of 24,
 # and the peak efficiency is found from each block. This represents the highest efficiency out of the 24 hour period.
-days = [uncorrected_efficiencies[i:i + 24] for i in range(0, len(uncorrected_efficiencies), 24)]
+days = [optical_efficiencies[i:i + 24] for i in range(0, len(optical_efficiencies), 24)]
 peak_efficiencies = []
 avg_efficiencies = []
 for day in days:
@@ -61,12 +61,12 @@ peak_efficiency_times = []
 for i in range(len(peak_efficiencies)):
     peak_efficiency_times.append(i*24)
 
-days_corrected = [corrected_efficiencies[i:i + 24] for i in range(0, len(corrected_efficiencies), 24)]
-peak_c_efficiencies = []
-avg_c_efficiencies = []
+days_corrected = [field_efficiencies[i:i + 24] for i in range(0, len(field_efficiencies), 24)]
+peak_f_efficiencies = []
+avg_f_efficiencies = []
 for day in days_corrected:
-    peak_c_efficiencies.append(max(day))
-    avg_c_efficiencies.append(np.mean(day))
+    peak_f_efficiencies.append(max(day))
+    avg_f_efficiencies.append(np.mean(day))
 
 # For each hour of the year, the average reflectance of the n heliostats is found. 
 # This can represent the overall soiling effect on the whole field.
@@ -87,7 +87,7 @@ t = np.arange(num_timesteps)
 for i in range(num_heliostats):
     plt.plot(t, reflectances[i, :], label=f"Heliostat {i+1}", linewidth=1.5)
 
-plt.xlabel("Time (hours)")
+plt.xlabel("Time [Hours]")
 plt.ylabel("Reflectance")
 plt.title("Change in Heliostat Reflectances")
 plt.legend()
@@ -99,14 +99,14 @@ plt.show()
 
 fig, ax1 = plt.subplots(figsize=(12, 6))
 ax1.plot(t, avg_reflectances, color="blue", label="Average Reflectances")
-ax1.set_xlabel("Hours")
+ax1.set_xlabel("Time [Hours]")
 ax1.set_ylabel("Average Reflectance", color="blue")
 ax1.set_title('Comparing the Average Field Reflectance to the Peak Efficiencies')
 ax1.tick_params(axis="y", labelcolor="blue")
 
 ax2 = ax1.twinx()  
-ax2.plot(peak_efficiency_times, peak_efficiencies, color="red", label="Uncorrected")
-ax2.plot(peak_efficiency_times, peak_c_efficiencies, color="green", label="Corrected")
+ax2.plot(peak_efficiency_times, peak_efficiencies, color="red", label="Optical")
+ax2.plot(peak_efficiency_times, peak_f_efficiencies, color="green", label="Field")
 ax2.set_ylabel("Peak Efficiency (per day)", color="black")
 ax2.tick_params(axis="y", labelcolor="black")
 ax2.legend(loc='lower right')
@@ -115,9 +115,9 @@ plt.show()
 
 # Plant Efficiency Over a 24 Hour Period
 fig, ax1 = plt.subplots(figsize=(12, 6))
-ax1.plot(t[:24], uncorrected_efficiencies[:24], color="red", label = 'Uncorrected')
-ax1.plot(t[:24], corrected_efficiencies[:24], color="green", label = 'Corrected')
-ax1.set_xlabel("Hours")
+ax1.plot(t[:24], optical_efficiencies[:24], color="red", label = 'Optical')
+ax1.plot(t[:24], field_efficiencies[:24], color="green", label = 'Field')
+ax1.set_xlabel("Time [Hours]")
 ax1.set_ylabel("Efficiency Across 24 Hour Period", color="black")
 ax1.set_title('Plant Efficiency Over a 24 Hour Period')
 ax1.tick_params(axis="y", labelcolor="black")
@@ -126,9 +126,9 @@ ax1.grid(True)
 plt.show()
 
 fig, ax1 = plt.subplots(figsize=(12, 6))
-ax1.plot(t[2812:2851], uncorrected_efficiencies[2812:2851], color="red", label = 'Uncorrected')
-ax1.plot(t[2812:2851], corrected_efficiencies[2812:2851], color="green", label = 'Corrected')
-ax1.set_xlabel("Hours")
+ax1.plot(t[2812:2851], optical_efficiencies[2812:2851], color="red", label = 'Optical')
+ax1.plot(t[2812:2851], field_efficiencies[2812:2851], color="green", label = 'Field')
+ax1.set_xlabel("Time [Hours]")
 ax1.set_ylabel("Efficiency", color="black")
 ax1.set_title('Resolution of Data Strongly Affecting Mean Calculations')
 ax1.tick_params(axis="y", labelcolor="black")
@@ -139,14 +139,14 @@ plt.show()
 # Average efficiencies instead of peak
 fig, ax1 = plt.subplots(figsize=(12, 6))
 ax1.plot(t, avg_reflectances, color="blue", label="Average Reflectances")
-ax1.set_xlabel("Hours")
+ax1.set_xlabel("Time [Hours]")
 ax1.set_ylabel("Average Reflectance", color="blue")
 ax1.set_title('Comparing the Average Field Reflectance to the Avg Efficiencies')
 ax1.tick_params(axis="y", labelcolor="blue")
 
 ax2 = ax1.twinx()  
-ax2.plot(peak_efficiency_times, avg_efficiencies, color="red", label="Uncorrected")
-ax2.plot(peak_efficiency_times, avg_c_efficiencies, color="green", label="Corrected")
+ax2.plot(peak_efficiency_times, avg_efficiencies, color="red", label="Optical")
+ax2.plot(peak_efficiency_times, avg_f_efficiencies, color="green", label="Field")
 ax2.set_ylabel("Average Efficiency (per 24 hour period)", color="black")
 ax2.tick_params(axis="y", labelcolor="black")
 ax2.legend(loc='lower right')

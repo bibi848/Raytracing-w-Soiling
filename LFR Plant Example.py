@@ -4,7 +4,7 @@ It models 11 LFR panels, lined up along the X (West to East) Axis, with a variab
 XYZ: X, East. Y, North. Z, Up.
 Further information for this script can be found on Aiming Strategy for Linear Fresnel Reflectors Document, and the SolTrace API documentation.
 """
-
+#%%
 # FUNCTIONS
 import os
 import numpy as np
@@ -39,7 +39,7 @@ from optical_geometrical_setup import CPC_positioning
 current_script_path = os.path.abspath(__file__)
 current_directory = os.path.dirname(current_script_path)  
 csv_path = os.path.join(current_directory, "CSV Files/Simulation Parameters.csv")
-lat, lon, hour_offset, receiver_height, receiver_length, receiver_diameter, panel_length, panel_width, panel_height, panel_spacing, panels_min_max, slope_error, specularity_error, CPC_depth, aperture_angle = import_simulation_parameters(pd.read_csv(csv_path))
+lat, lon, hour_offset, receiver_height, receiver_length, receiver_diameter, panel_length, panel_width, panel_height, panel_spacing, panel_positions, slope_error, specularity_error, CPC_depth, aperture_angle = import_simulation_parameters(pd.read_csv(csv_path))
 
 # Date and Location
 # Location is Woomera and the date is set as 01/04/2018 at 11:00. This can be changed to any date.
@@ -50,16 +50,13 @@ clear_sky = location.get_clearsky(pd.DatetimeIndex([date]), model = 'ineichen')
 DNI = clear_sky['dni'].values[0]
 
 # Plant layout
+num_heliostats = len(panel_positions)
+receiver_height -= panel_height    # This height correction is done for proper aiming of the fictitious surface.
+panel_height = 0                   # By bringing the panels to the ground, it removes the need for x and z shifts of the fictitious surface to aim on the field properly.          
 receiver_position = [0, 0, receiver_height]
-
-panel_positions = np.arange(panels_min_max[0], panels_min_max[1], panel_width + panel_spacing) # Describes the x-coordinate for each of the mirrors, 
-                                                                                               # ranging from -3.5 [m] to 3.75 [m].
 stg1_length = panel_length 
-stg1_width = panel_width * len(panel_positions) + panel_spacing * (len(panel_positions) - 1) 
-distance_multiplier = 10                               # Scaling factor which pushes the fictitious surface away from the solar field.
-x_shift = (panel_positions[0] + panel_positions[-1])/2 # As the solar field is not exactly centered along the x-axis, there is a shift 
-                                                       # required for the aiming algorithm.
-z_shift = panel_height/10 # Similarly to the x_shift, there is also a positional shift vertically from the height of the panels.
+stg1_width = panel_width * num_heliostats + panel_spacing * (num_heliostats - 1) 
+distance_multiplier = 10 # Scaling factor which pushes the fictitious surface away from the solar field.
 
 # Create API class instance
 PT = PySolTrace()
@@ -103,10 +100,10 @@ stg1.position = Point(0,0,0)
 
 optics_fictitious = op_fictitious_surface(PT, slope_error, specularity_error)
 el1 = stg1.add_element()
-el1.position = Point(distance_multiplier*(sun_position[0] + x_shift), 
+el1.position = Point(distance_multiplier*sun_position[0], 
                      distance_multiplier*sun_position[1], 
-                     distance_multiplier*(sun_position[2] + z_shift))
-el1.aim = Point(distance_multiplier*(sun_position[0]+x_shift), distance_multiplier*sun_position[1], 0)
+                     distance_multiplier*sun_position[2])
+el1.aim = Point(distance_multiplier*sun_position[0], distance_multiplier*sun_position[1], 0)
 el1.surface_flat()
 el1.aperture_rectangle(stg1_width, stg1_length)
 el1.optic = optics_fictitious
@@ -117,11 +114,11 @@ stg2.is_tracethrough = True
 stg2.name = 'Stage 2: Cover'
 stg2.position = Point(0,0,0)
 optics_cover = op_cover_surface(PT, slope_error, specularity_error)
-# el2 = trapezoidal_secondary_reflector(stg2, optics_cover, receiver_height, receiver_length)
+el2 = trapezoidal_secondary_reflector(stg2, optics_cover, receiver_height, receiver_length)
 
-x, y = design_secondary_concentrator(aperture_angle, 3*np.pi/2-aperture_angle, receiver_diameter/2, n_thetas=100, clip_points=20)
-sample_points_x, sample_points_y, midpoints_x, midpoints_y = sample_CPC(x, -1*y, 12, receiver_height)
-CPC_positioning(stg2, optics_cover, panel_length, sample_points_x, sample_points_y, midpoints_x, midpoints_y)
+# x, y = design_secondary_concentrator(aperture_angle, 3*np.pi/2-aperture_angle, receiver_diameter/2, n_thetas=100, clip_points=20)
+# sample_points_x, sample_points_y, midpoints_x, midpoints_y = sample_CPC(x, -1*y, 12, receiver_height)
+# CPC_positioning(stg2, optics_cover, panel_length, sample_points_x, sample_points_y, midpoints_x, midpoints_y)
 
 # Stage 3, Heliostats
 stg3 = PT.add_stage()
@@ -160,8 +157,8 @@ el4.aperture_singleax_curve(0, 0, receiver_length) # (inner coordinate of revolv
                                                    # length of revolved section along axis of revolution)
 optics_secondary = op_secondaryReflector_surface(PT, slope_error, specularity_error)
 
-# el4 = trapezoidal_secondary_reflector(stg4, optics_secondary, receiver_height, receiver_length)
-CPC_positioning(stg4, optics_receiver, panel_length, sample_points_x, sample_points_y, midpoints_x, midpoints_y)
+el4 = trapezoidal_secondary_reflector(stg4, optics_secondary, receiver_height, receiver_length)
+# CPC_positioning(stg4, optics_receiver, panel_length, sample_points_x, sample_points_y, midpoints_x, midpoints_y)
 
 # Simulation Parameters
 PT.num_ray_hits = 1e5
@@ -190,25 +187,18 @@ receiver_abs = df[(df['stage'] == 4) & (df['element'] == -1)].shape[0]  # Number
 receiver_tot = df[(df['stage'] == 4) & (df['element'] != 0)].shape[0] # Number of rays 
 
 # Optical efficiency and power per ray
-A_aperture = len(panel_positions) * panel_width * panel_length # Mirrored surface
+ppr = PT.powerperray  # (DNI / number of rays) * area * cos(zenith), where the area being hit is the fictitious surface.
+aperture = len(panel_positions) * panel_width * panel_length
 
-# Efficiency
-ppr_corrected = stg1_width * panel_length * np.cos(theta_T) * PT.dni / (PT.num_ray_hits - rays_gaps)
-    
-if (mirrors_hits) != 0:
-    eta_opt_corrected = receiver_abs * ppr_corrected / (PT.dni * A_aperture)
-else:
-    eta_opt_corrected = 0   
-   
-eta_opt_zero = 0.686
-eta_opt_rays = receiver_abs / mirrors_hits
-IAM = eta_opt_corrected/eta_opt_zero
+field_efficiency = (receiver_abs * ppr) / (PT.dni * aperture)
+optical_efficiency = receiver_abs / mirrors_hits
 
 # Results
 print()
 print('The sun is at an azimuth of', round(azimuth_deg), 'and a zenith of', round(zenith_deg))
 print("Number of rays traced: {:d}".format(PT.raydata.index.size))
 print(f"Current DNI: {DNI:.2f} W/m2")
+print(f'Power per ray: {ppr:.2f} W/ray')
 print()
 print('Number of rays hitting,')
 print('Fictitious surface:', fictitious_df)
@@ -217,7 +207,5 @@ print('Mirrors:', mirrors_hits)
 print('Between the mirrors:', rays_gaps)
 print('Receiver:', receiver_abs)
 print()
-print(f'Rays ratio optical efficiency: {eta_opt_rays*100:.2f}%')
-print(f'Corrected power per ray: {ppr_corrected:.2f} W/m2')
-print(f'Corrected optical efficiency: {eta_opt_corrected*100:.2f}%')
-print(f'Corrected IAM: {IAM*100:.2f}%')
+print(f'Optical efficiency: {optical_efficiency*100:.2f}%')
+print(f'Field Efficiency (ppr): {field_efficiency*100:.2f}%')
