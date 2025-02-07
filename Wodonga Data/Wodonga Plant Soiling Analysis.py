@@ -90,87 +90,89 @@ DNI_days.extend([0] * extend)
 # %%
 # Computing hrz0 from data
 # The code below is largely taken from the HelioSoil Repository. Visit the HelioSoil repository, and the wodonga_analysis.py script
-# for more information. 
-reflectometer_incidence_angle = 15       # Angle of incidence of reflectometer
-reflectometer_acceptance_angle = 12.5e-3 # Half acceptance angle of reflectance measurements
-second_surf = True                       # True if using the second-surface model. Otherwise, use first-surface
-d = f"{wodonga_path}/Training Data/"
-train_experiments = [0]                  # Indices for training experiements from 0 to len(files) - 1
-train_mirrors = ["OE_M1_T00"]            # Which mirrors within the experiemnts are used for
-k_factor = None                          # None sets equal to 1.0, "import" imports from the file
-dust_type = "PM10"                       
+# for more information. As the hrz0 has previously been calculated as 2.72 for this setup, the code does not need to be run each time. 
+# If working with the code below, uncomment it to find a new value of hrz0 if required.
 
-files,all_intervals,exp_mirrors,all_mirrors = smu.get_training_data(d,"experiment_")
-orientation = [ [s[1] for s in mirrors] for mirrors in exp_mirrors]
+# reflectometer_incidence_angle = 15       # Angle of incidence of reflectometer
+# reflectometer_acceptance_angle = 12.5e-3 # Half acceptance angle of reflectance measurements
+# second_surf = True                       # True if using the second-surface model. Otherwise, use first-surface
+# d = f"{wodonga_path}/Training Data/"
+# train_experiments = [0]                  # Indices for training experiements from 0 to len(files) - 1
+# train_mirrors = ["OE_M1_T00"]            # Which mirrors within the experiemnts are used for
+# k_factor = None                          # None sets equal to 1.0, "import" imports from the file
+# dust_type = "PM10"                       
 
-# Feb 2022 (first experiment --- remove last three days after rain started)
-all_intervals[0][0] = np.datetime64('2022-02-20T16:20:00')
-all_intervals[0][1] = np.datetime64('2022-02-23T17:40:00')
+# files,all_intervals,exp_mirrors,all_mirrors = smu.get_training_data(d,"experiment_")
+# orientation = [ [s[1] for s in mirrors] for mirrors in exp_mirrors]
 
-# April 2022 (remove nothing, first/last measurement)
-all_intervals[1][0] = np.datetime64('2022-04-21T11:00:00')
-all_intervals[1][1] = np.datetime64('2022-04-27T08:30:00')
+# # Feb 2022 (first experiment --- remove last three days after rain started)
+# all_intervals[0][0] = np.datetime64('2022-02-20T16:20:00')
+# all_intervals[0][1] = np.datetime64('2022-02-23T17:40:00')
 
-# Feb 2023 (most recent experiment --- remove very dirty days)
-all_intervals[2][0] = np.datetime64('2023-02-09T15:00:00')
-all_intervals[2][1] = np.datetime64('2023-02-14T09:45:00')
+# # April 2022 (remove nothing, first/last measurement)
+# all_intervals[1][0] = np.datetime64('2022-04-21T11:00:00')
+# all_intervals[1][1] = np.datetime64('2022-04-27T08:30:00')
 
-testing_intervals = all_intervals
+# # Feb 2023 (most recent experiment --- remove very dirty days)
+# all_intervals[2][0] = np.datetime64('2023-02-09T15:00:00')
+# all_intervals[2][1] = np.datetime64('2023-02-14T09:45:00')
 
-Nfiles = len(files)
-extract = lambda x,ind: [x[ii] for ii in ind]
-files_train = extract(files,train_experiments)
-training_intervals = extract(all_intervals,train_experiments)
-testing_intervals = list(all_intervals)
-t = [t for t in train_experiments]
+# testing_intervals = all_intervals
 
-imodel = smf.semi_physical(file_params)
-imodel_constant = smf.constant_mean_deposition(file_params)
-sim_data_train = smb.simulation_inputs( files_train,
-                                        k_factors=k_factor,
-                                        dust_type=dust_type
-                                        )
-reflect_data_train = smb.reflectance_measurements(  files_train,
-                                                    sim_data_train.time,
-                                                    number_of_measurements=9.0,
-                                                    reflectometer_incidence_angle=reflectometer_incidence_angle,
-                                                    reflectometer_acceptance_angle=reflectometer_acceptance_angle,
-                                                    import_tilts=True,
-                                                    column_names_to_import=train_mirrors
-                                                    )
-sim_data_train,reflect_data_train = smu.trim_experiment_data(   sim_data_train,
-                                                                reflect_data_train,
-                                                                training_intervals 
-                                                            )
+# Nfiles = len(files)
+# extract = lambda x,ind: [x[ii] for ii in ind]
+# files_train = extract(files,train_experiments)
+# training_intervals = extract(all_intervals,train_experiments)
+# testing_intervals = list(all_intervals)
+# t = [t for t in train_experiments]
+
+# imodel = smf.semi_physical(file_params)
+# imodel_constant = smf.constant_mean_deposition(file_params)
+# sim_data_train = smb.simulation_inputs( files_train,
+#                                         k_factors=k_factor,
+#                                         dust_type=dust_type
+#                                         )
+# reflect_data_train = smb.reflectance_measurements(  files_train,
+#                                                     sim_data_train.time,
+#                                                     number_of_measurements=9.0,
+#                                                     reflectometer_incidence_angle=reflectometer_incidence_angle,
+#                                                     reflectometer_acceptance_angle=reflectometer_acceptance_angle,
+#                                                     import_tilts=True,
+#                                                     column_names_to_import=train_mirrors
+#                                                     )
+# sim_data_train,reflect_data_train = smu.trim_experiment_data(   sim_data_train,
+#                                                                 reflect_data_train,
+#                                                                 training_intervals 
+#                                                             )
                                                             
-sim_data_train,reflect_data_train = smu.trim_experiment_data(   sim_data_train,
-                                                                reflect_data_train,
-                                                                "reflectance_data" 
-                                                            )
+# sim_data_train,reflect_data_train = smu.trim_experiment_data(   sim_data_train,
+#                                                                 reflect_data_train,
+#                                                                 "reflectance_data" 
+#                                                             )
 
-imodel.helios_angles(sim_data_train, reflect_data_train, second_surface=second_surf)
-imodel.helios.compute_extinction_weights(sim_data_train, imodel.loss_model,
-                                         verbose=False, options={'grid_size_x':1000})
-ext_weights = imodel.helios.extinction_weighting[0].copy()
+# imodel.helios_angles(sim_data_train, reflect_data_train, second_surface=second_surf)
+# imodel.helios.compute_extinction_weights(sim_data_train, imodel.loss_model,
+#                                          verbose=False, options={'grid_size_x':1000})
+# ext_weights = imodel.helios.extinction_weighting[0].copy()
 
-imodel_constant.helios_angles(sim_data_train,reflect_data_train,second_surface=second_surf)
-file_inds = np.arange(len(files_train))
-imodel_constant = smu.set_extinction_coefficients(imodel_constant,ext_weights,file_inds)
+# imodel_constant.helios_angles(sim_data_train,reflect_data_train,second_surface=second_surf)
+# file_inds = np.arange(len(files_train))
+# imodel_constant = smu.set_extinction_coefficients(imodel_constant,ext_weights,file_inds)
 
-log_param_hat,log_param_cov = imodel.fit_mle(   sim_data_train,
-                                        reflect_data_train,
-                                        transform_to_original_scale=False)
+# log_param_hat,log_param_cov = imodel.fit_mle(   sim_data_train,
+#                                         reflect_data_train,
+#                                         transform_to_original_scale=False)
 
-s = np.sqrt(np.diag(log_param_cov))
-param_ci = log_param_hat + 1.96*s*np.array([[-1],[1]])
-lower_ci = imodel.transform_scale(param_ci[0,:])
-upper_ci = imodel.transform_scale(param_ci[1,:])
-param_hat = imodel.transform_scale(log_param_hat)
-hrz0_mle,sigma_dep_mle = param_hat
-print(f'hrz0: {hrz0_mle:.2e} [{lower_ci[0]:.2e}, {upper_ci[0]:.2e}]')
-print(f'\sigma_dep: {sigma_dep_mle:.2e} [{lower_ci[1]:.2e},{upper_ci[1]:.2e}] [p.p./day]')
+# s = np.sqrt(np.diag(log_param_cov))
+# param_ci = log_param_hat + 1.96*s*np.array([[-1],[1]])
+# lower_ci = imodel.transform_scale(param_ci[0,:])
+# upper_ci = imodel.transform_scale(param_ci[1,:])
+# param_hat = imodel.transform_scale(log_param_hat)
+# hrz0_mle,sigma_dep_mle = param_hat
+# print(f'hrz0: {hrz0_mle:.2e} [{lower_ci[0]:.2e}, {upper_ci[0]:.2e}]')
+# physical_model.hrz0 = hrz0_mle
 
-physical_model.hrz0 = hrz0_mle
+physical_model.hrz0 = 2.72
 
 # %%
 # Finding the tilt angles for all the heliostats across the whole time frame
@@ -223,7 +225,7 @@ sigma_dep = 0.01
 nominal_reflectance = 1.0
 
 # Using HelioSoil to set up and simulate the soiling of the solar field.
-physical_model.helios.tilt = {0: np.rad2deg(tilt_angles_rad)}                                    # Inputting the tilt angles calculated from the entire year.
+physical_model.helios.tilt = {0: np.rad2deg(tilt_angles_rad)}                                    # Inputting the tilt angles calculated from the entire dataset.
 physical_model.helios.compute_extinction_weights(sim_data, loss_model="geometry", verbose=False) # Computing the optical extinction weights.
 physical_model.deposition_flux(sim_data, hrz0=physical_model.hrz0, verbose=False)                # Computing the deposition flux, to populate the pdfqN.
 physical_model.calculate_delta_soiled_area(sim_data, sigma_dep=sigma_dep, verbose=False)         # Computing the change in soiled area.
@@ -231,7 +233,6 @@ delta_soiled_area = physical_model.helios.delta_soiled_area[0]
 
 #%%
 # Finding the equivalent reflectance of each panel for each hour of the year
-cleaning_frequency = 14*24 # Hours, representing after how many hours of use the panel's soiled area is reset to zero.
 
 def h(phi):
     return 2/(np.cos(phi))
@@ -239,26 +240,46 @@ def h(phi):
 def calc_reflectance(nominal_reflectance, cumulative_soiled_area, incidence_angle_rad):
     return nominal_reflectance * (1 - cumulative_soiled_area * h(incidence_angle_rad))
 
-# With the cleaning frequency, the cumulative soiled area is calculated.
-cumulative_soiled_area = np.zeros_like(delta_soiled_area)
-reflectance = np.zeros_like(delta_soiled_area)
-for i in range(num_heliostats):
-    for t in range(1, num_timesteps):
-        cumulative_soiled_area[i,t] = cumulative_soiled_area[i, t-1] + delta_soiled_area[i, t]
-        # cumulative_soiled_area[i, t] = 0
+def calc_cleanliness(cumulative_soiled_area, incidence_angle_rad):
+    return (1 - cumulative_soiled_area * h(incidence_angle_rad))
 
-        # Constant cleaning Frequency
-        # if t % cleaning_frequency == 0:
-        #     cumulative_soiled_area[i,t] = 0
+# Reflectance based cleaning schedule
+# cumulative_soiled_area = np.zeros_like(delta_soiled_area)
+# reflectance = np.zeros_like(delta_soiled_area)
+# for i in range(num_heliostats):
+#     for t in range(1, num_timesteps):
+#         cumulative_soiled_area[i,t] = cumulative_soiled_area[i, t-1] + delta_soiled_area[i, t]
+#         # cumulative_soiled_area[i, t] = 0  # To use to get a clean field for comparison
 
-        # Conditional Cleaning Frequency
-        if (calc_reflectance(nominal_reflectance, cumulative_soiled_area[i,t], incidence_angles_rad[i,t])) < 0.65:
-            cumulative_soiled_area[i,t] = 0
+#         # Conditional Cleaning Frequency - Reflectance
+#         if (calc_reflectance(nominal_reflectance, cumulative_soiled_area[i,t], incidence_angles_rad[i,t])) < 0.65:
+#             cumulative_soiled_area[i,t] = 0
 
-        reflectance[i,t] = calc_reflectance(nominal_reflectance, cumulative_soiled_area[i,t], incidence_angles_rad[i,t])
+#         reflectance[i,t] = calc_reflectance(nominal_reflectance, cumulative_soiled_area[i,t], incidence_angles_rad[i,t])
         
-for i in range(len(reflectance)):
-    reflectance[i][0] = 1.0
+# for i in range(len(reflectance)):
+#     reflectance[i][0] = 1.0
+
+# Cleanliness based cleaning schedule
+cumulative_soiled_area = np.zeros_like(delta_soiled_area)
+panel_cleanliness = np.ones_like(delta_soiled_area)
+cleanliness_threshold = 0.8
+
+for t in range(1, num_timesteps):
+    field_cleanliness = []
+
+    for p in range(num_heliostats):
+        cumulative_soiled_area[p, t] = cumulative_soiled_area[p, t-1] + delta_soiled_area[p, t]
+        panel_cleanliness[p, t] = calc_cleanliness(cumulative_soiled_area[p,t], incidence_angles_rad[p,t])
+
+        if t % 288 == 0:
+            field_cleanliness.append(panel_cleanliness[p, t])
+    
+    if t % 288 == 0:
+        avg_cleanliness = np.mean(field_cleanliness)
+
+        if avg_cleanliness < cleanliness_threshold:
+            cumulative_soiled_area[:, t] = 0
 
 #%%
 # Plotting the soiling of the heliostats over the year
@@ -279,10 +300,10 @@ plt.show()
 plt.figure(figsize=(12, 6))
 
 for i in range(num_heliostats):
-    plt.plot(time, reflectance[i, :], label=f"Heliostat {i+1}", linewidth=1.5)
+    plt.plot(time, panel_cleanliness[i, :], label=f"Heliostat {i+1}", linewidth=1.5)
 
 plt.xlabel("Time")
-plt.ylabel("Heliostat Reflectance")
+plt.ylabel("Heliostat Cleanliness")
 plt.title("Change In Heliostat Reflectance Over Time")
 plt.legend()
 plt.grid(True)
@@ -309,14 +330,17 @@ for i in range(num_heliostats):
     key = f"Heliostat tilt [deg] {i+1}"
     data[key] = np.rad2deg(tilt_angles_rad[i, :])
 for i in range(num_heliostats):
+    key = f"Incident angle [rad] {i+1}"
+    data[key] = incidence_angles_rad[i]
+for i in range(num_heliostats):
     key = f"Delta Soiled Area [m2/m2] {i+1}"
     data[key] = delta_soiled_area[i]
 for i in range(num_heliostats):
     key = f"Cumulative Soiled Area [m2/m2] {i+1}"
     data[key] = cumulative_soiled_area[i]
 for i in range(num_heliostats):
-    key = f"Heliostat Reflectance {i+1}"
-    data[key] = reflectance[i]
+    key = f"Heliostat Cleanliness {i+1}"
+    data[key] = panel_cleanliness[i]
 
 df = pd.DataFrame(data)
 df.to_csv(filepath, index=False)

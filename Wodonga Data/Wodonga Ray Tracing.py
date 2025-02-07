@@ -58,16 +58,16 @@ transversal_angles = df['Theta T [rad]'].to_numpy()
 DNI_values = df['DNI [W/m2]'].to_numpy()
 
 tilt_header_list = []
-reflectance_header_list = []
+cleanliness_header_list = []
 for i in range(num_heliostats):
     tilt_header = f"Heliostat tilt [deg] {i+1}"
-    reflectance_header = f"Heliostat Reflectance {i+1}"
+    cleanliness_header = f"Heliostat Cleanliness {i+1}"
     tilt_header_list.append(tilt_header)
-    reflectance_header_list.append(reflectance_header)
+    cleanliness_header_list.append(cleanliness_header)
 
 tilts_deg = df[tilt_header_list].to_numpy().T
 tilts_rad = np.deg2rad(tilts_deg)
-reflectances = df[reflectance_header_list].to_numpy().T
+cleanlinesses = df[cleanliness_header_list].to_numpy().T
 
 # Simulating the solar field for every hour of the year
 start_time = time.time()
@@ -86,7 +86,6 @@ def ray_trace(i):
 
         azimuth_rad = azimuths_rad[i]
         zenith_rad = np.pi/2 - elevations_rad[i]
-        theta_T = transversal_angles[i]
         DNI = DNI_values[i]
 
         # Describing the sun's position in terms of the azimuth and zenith. The full breakdown for this result is shown in
@@ -128,7 +127,7 @@ def ray_trace(i):
         stg3.name = 'Stage 3: Heliostats'
         stg3.position = Point(0,0,0)
         for p in range(num_heliostats):
-            optics_heliostat_p = op_heliostat_surface(PT, slope_error, specularity_error, reflectances[p][i], p)
+            optics_heliostat_p = op_heliostat_surface(PT, slope_error, specularity_error, cleanlinesses[p][i], p)
 
             heliostat_position = [panel_positions[p], 0, panel_height]
             panel_normal = calculate_panel_normal(tilts_rad[p][i])
@@ -172,21 +171,20 @@ def ray_trace(i):
 
         mirrors_hits = df[(df['stage']==3) & (df['element'] != 0)]['number'].unique().shape[0] # Number of rays hitting stage 3
         receiver_abs = df[(df['stage'] == 4) & (df['element'] == -1)].shape[0]                 # Number of rays hitting receiver from mirrors
-        cover_miss = df[(df['stage']==2) & (df['element'] == 0)]['number'].unique().shape[0]   # Number of rays missing stage 2
-        rays_gaps = cover_miss - mirrors_hits # Rays in the space between mirrors
-
-        ppr_corrected = stg1_width * panel_length * np.cos(theta_T) * PT.dni / (PT.num_ray_hits - rays_gaps)
     
         if mirrors_hits != 0:
-            eta_opt_rays = receiver_abs / mirrors_hits
-            DNI_corrected = eta_opt_rays * DNI
-            eta_opt_corrected = receiver_abs * ppr_corrected / (PT.dni * A_aperture)
-        else:
-            eta_opt_rays = 0
-            eta_opt_corrected = 0
-            DNI_corrected = 0 
 
-        return [eta_opt_rays, eta_opt_corrected, DNI_corrected]
+            ppr = PT.powerperray  # (DNI / number of rays) * area * cos(zenith), where the area being hit is the fictitious surface.
+            aperture = len(panel_positions) * panel_width * panel_length
+
+            optical_efficiency = receiver_abs / mirrors_hits
+            field_efficiency = (receiver_abs * ppr) / (PT.dni * aperture)
+            DNI_efficiency = field_efficiency * DNI
+
+        else:
+            optical_efficiency, field_efficiency, DNI_efficiency = 0, 0, 0
+
+        return [optical_efficiency, field_efficiency, DNI_efficiency]
     
     else: # When the sun is below the horizon, the efficiency of the plant is 0.
          return [0,0,0]
@@ -209,16 +207,16 @@ if __name__ == "__main__":
     # Appending the results to a csv
     filepath = current_directory + '\\Wodonga Data\\Wodonga Raytrace Results.csv'
 
-    uncorrected_efficiency = []
-    corrected_efficiency = []
+    optical_efficiency = []
+    field_efficiency = []
     DNI_efficiency = []
     for i in range(len(data_multi)):
-        uncorrected_efficiency.append(data_multi[i][0])
-        corrected_efficiency.append(data_multi[i][1])
+        optical_efficiency.append(data_multi[i][0])
+        field_efficiency.append(data_multi[i][1])
         DNI_efficiency.append(data_multi[i][2])
 
-    csv_data["Uncorrected efficiency"] = uncorrected_efficiency
-    csv_data["Corrected efficiency"] = corrected_efficiency
+    csv_data["Optical efficiency"] = optical_efficiency
+    csv_data["Field efficiency"] = field_efficiency
     csv_data["DNI corrected efficiency"] = DNI_efficiency
 
     df = pd.DataFrame(csv_data)

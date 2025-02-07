@@ -11,7 +11,7 @@ current_script_path = os.path.abspath(__file__)
 wodonga_path = os.path.dirname(current_script_path)
 heliosoil_path = wodonga_path.replace(r"\Wodonga Data", "\\HelioSoil")
 current_directory = wodonga_path.replace(r"\Wodonga Data", "")
-filepath = wodonga_path + "\\Clean Optimisation Test.csv"
+filepath = wodonga_path + "\\Clean Optimisation Test 2.csv"
 
 sys.path.append(heliosoil_path)
 sys.path.append(current_directory)
@@ -94,11 +94,11 @@ day_clean = []
 
 D_soiled_efficiency_full = []
 D_clean_efficiency_full = []
-optical_efficiency_full = []
-optical_efficiency_clean_full = []
+field_efficiency_full = []
+field_efficiency_clean_full = []
 
 # Cleaning optimisation parameters
-cleanliness_ratio = 0.5
+cleanliness_ratio = 0.8
 nominal_reflectance = 1.0
 
 def shouldClean(soiled_efficiency, clean_efficiency, cleanliness_ratio):
@@ -196,11 +196,14 @@ def ray_trace(i, reflectances, DNI, sun_position):
         receiver_abs = df[(df['stage'] == 4) & (df['element'] == -1)].shape[0]                 # Number of rays hitting receiver from mirrors
     
         if mirrors_hits != 0:
-            optical_efficiency = receiver_abs / mirrors_hits
-        else:
-            optical_efficiency = 0
+            ppr = PT.powerperray
+            aperture = len(panel_positions) * panel_width * panel_length
+            field_efficiency = (receiver_abs * ppr) / (PT.dni * aperture)
 
-        return optical_efficiency
+        else:
+            field_efficiency = 0
+
+        return field_efficiency
     
     else: # When the sun is below the horizon, the efficiency of the plant is 0.
          return 0
@@ -221,19 +224,27 @@ def multi_func(i):
     zenith_rad = np.pi/2 - elevations_rad[i]
     DNI = DNI_values[i]
     sun_position = np.array([np.sin(azimuth_rad)*np.sin(zenith_rad), np.cos(azimuth_rad)*np.sin(zenith_rad), np.cos(zenith_rad)])
-        
 
-    optical_efficiency = ray_trace(i, reflectance, DNI, sun_position)
-    optical_efficiency_clean = ray_trace(i, reflectance_clean, DNI, sun_position)
+    field_efficiency = ray_trace(i, reflectance, DNI, sun_position)
+    field_efficiency_clean = ray_trace(i, reflectance_clean, DNI, sun_position)
 
-    optical_efficiency_full.append(optical_efficiency)
-    optical_efficiency_clean_full.append(optical_efficiency_clean)
+    D_optical_efficiency = field_efficiency * DNI
+    D_optical_efficiency_clean = field_efficiency_clean * DNI
 
-    D_optical_efficiency = optical_efficiency * DNI
-    D_optical_efficiency_clean = optical_efficiency_clean * DNI
+    field_efficiency_full.append(field_efficiency)
+    field_efficiency_clean_full.append(field_efficiency_clean)
     
     day_soiled.append(D_optical_efficiency)
     day_clean.append(D_optical_efficiency_clean)
+
+    # if DNI != 0:
+    #     soiled_efficiency = D_optical_efficiency / DNI
+    #     clean_efficiency = D_optical_efficiency_clean / DNI
+
+    # if shouldClean(soiled_efficiency, clean_efficiency, cleanliness_ratio):
+    #         cumulative_soiled_area[:, i] = 0
+    
+    # return [soiled_efficiency, clean_efficiency, optical_efficiency, optical_efficiency_clean]
 
     # Check cleanliness
     if i % 288 == 0 and i != 0:
@@ -250,7 +261,6 @@ def multi_func(i):
         D_soiled_efficiency_full.append(soiled_efficiency)
         D_clean_efficiency_full.append(clean_efficiency)
 
-        # return [soiled_efficiency, clean_efficiency]
 
 for i in range(num_timesteps):
     print(i)
@@ -259,23 +269,64 @@ for i in range(num_timesteps):
 print()
 print('Inputting into csv')
 
-extend = len(optical_efficiency_full) - len(D_soiled_efficiency_full)
+extend = len(field_efficiency_full) - len(D_soiled_efficiency_full)
 D_soiled_efficiency_full.extend([0] * extend)
 D_clean_efficiency_full.extend([0] * extend)
 
 data = {
-    "Optical Efficiency" : optical_efficiency_full,
-    "Optical Efficiency - Clean" : optical_efficiency_clean_full,
+    "Optical Efficiency" : field_efficiency_full,
+    "Optical Efficiency - Clean" : field_efficiency_clean_full,
     "DNI Corrected Efficiency [per day]" : D_soiled_efficiency_full,
     "DNI Corrected Efficiency (clean) [per day]" : D_clean_efficiency_full
 }
 
-# for i in range(num_heliostats):
-#     key = f"Heliostat Reflectance {i+1}"
-#     data[key] = reflectance[i]
+for i in range(num_heliostats):
+    key = f"Cumulative Soiled Area [m2/m2] {i+1}"
+    data[key] = cumulative_soiled_area[i]
+for i in range(num_heliostats):
+    key = f"Heliostat Reflectance {i+1}"
+    data[key] = reflectance[i]
 
-# df = pd.DataFrame(data)
-# df.to_csv(filepath, index = False)
+
+df = pd.DataFrame(data)
+df.to_csv(filepath, index = False)
 
 
-# %%
+# data = {}
+
+# # Multiprocessing
+# if __name__ == "__main__":
+#     cores = cpu_count()  # Number of CPU cores used/ parallel processes. Can be changed to match the appropriate hardware.
+#     ran = num_timesteps  # Number of inputs the function will process.
+
+#     start_multi = time.time()
+#     with Pool(cores) as pool:
+#         data_multi = pool.map(multi_func, range(ran))
+#     end_multi = time.time()
+
+#     print()
+#     print('Time Taken:', end_multi - start_multi)
+
+#     DNI_efficiency = []
+#     DNI_efficiency_clean = []
+#     optical_efficiency = []
+#     optical_efficiency_clean = []
+#     for i in range(len(data_multi)):
+#         DNI_efficiency.append(data_multi[i][0])
+#         DNI_efficiency_clean.append(data_multi[i][1])
+#         optical_efficiency.append(data_multi[i][2])
+#         optical_efficiency_clean.append(data_multi[i][3])
+
+#     data = {
+#         "Optical Efficiency" : optical_efficiency,
+#         "Optical Efficiency (clean)" : optical_efficiency_clean,
+#         "DNI Corrected Efficiency" : DNI_efficiency,
+#         "DNI Corrected Efficiency (clean)" : DNI_efficiency_clean
+#     }
+
+#     for i in range(num_heliostats):
+#         key = f"Heliostat Reflectance {i+1}"
+#         data[key] = reflectance[i]
+
+#     df = pd.DataFrame(data)
+#     df.to_csv(filepath, index = False)
