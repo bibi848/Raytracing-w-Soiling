@@ -24,12 +24,12 @@ csv_path = os.path.join(current_directory, "Wodonga Data\\Wodonga Raytrace Resul
 df_raytrace_results_clean = pd.read_csv(csv_path)
 
 # Extracting the data from the csv file created in Wodonga Plant Soiling Analysis.py
-azimuths_deg = df_soiled_data['Azimuth [deg]'].to_numpy()
-azimuths_rad = np.deg2rad(azimuths_deg)
+azimuths_deg   = df_soiled_data['Azimuth [deg]'].to_numpy()
+azimuths_rad   = np.deg2rad(azimuths_deg)
 elevations_deg = df_soiled_data['Elevation [deg]'].to_numpy()
 elevations_rad = np.deg2rad(elevations_deg)
-num_timesteps = len(df_soiled_data['Date'].to_numpy())
-DNI_day_sums = df_soiled_data["DNI Sum Per Day"].to_numpy()
+num_timesteps  = len(df_soiled_data['Date'].to_numpy())
+DNI_day_sums   = df_soiled_data["DNI Sum Per Day"].to_numpy()
 DNI_all = df_soiled_data["DNI [W/m2]"].to_numpy()
 
 num_heliostats = 11

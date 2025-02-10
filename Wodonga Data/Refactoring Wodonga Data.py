@@ -2,7 +2,9 @@
 # Importing all Wodonga Data
 """
 This script takes ALL_DATA_WODONGA.xlsx and extracts the data required to be placed in a new excel file which can be 
-read by the HelioSoil scripts. 
+read by the HelioSoil scripts. It includes some refactoring, as the given data is "incomplete". For example, there is
+a 2 month gap which is filled in by using previous data. Any other gaps that are filled in are done so via linear 
+interpolation. This leads to 3855 rows of data being filled in (2.1% of total data).
 """
 # Get the directory of the current script
 import os
@@ -11,29 +13,26 @@ wodonga_directory = os.path.dirname(current_script_path) # Directory containing 
 HelioSoil_path = wodonga_directory.replace(r"\Wodonga Data", "\\HelioSoil\\woomera_demo\\woomera_data.xlsx")
 
 import pandas as pd
-import numpy as np
-from datetime import datetime
 import datetime as dt
-import time
 import copy
 
 all_data_t1 = pd.read_excel(wodonga_directory + "\\ALL_DATA_WODONGA.xlsx")
-# all_data = pd.read_excel(wodonga_directory + "\\test set.xlsx")
 
-# Only taking data we need to make computation faster
-Time_data = all_data_t1["tmsmp"].reset_index(drop=True)
-AirTemp_data = all_data_t1["M1_T1"].reset_index(drop=True)
+# Extracting required data from ALL_DATA_WODONGA. This is so that the linear interpolation is used on the minimum 
+# required number of data points.
+Time_data      = all_data_t1["tmsmp"].reset_index(drop=True)
+AirTemp_data   = all_data_t1["M1_T1"].reset_index(drop=True)
 WindSpeed_data = all_data_t1["M1_WS"].reset_index(drop=True)
-WindDir_data = all_data_t1["M1_WD"].reset_index(drop=True)
-RH_data = all_data_t1["M1_ppRH"].reset_index(drop=True)
-Rain_data = all_data_t1["M1_P"].reset_index(drop=True)
-DewPoint_data = all_data_t1["S_DP"].reset_index(drop=True)
-PM10_data = all_data_t1["PM10"].reset_index(drop=True)
-data_length = len(Time_data)
+WindDir_data   = all_data_t1["M1_WD"].reset_index(drop=True)
+RH_data        = all_data_t1["M1_ppRH"].reset_index(drop=True)
+Rain_data      = all_data_t1["M1_P"].reset_index(drop=True)
+DewPoint_data  = all_data_t1["S_DP"].reset_index(drop=True)
+PM10_data      = all_data_t1["PM10"].reset_index(drop=True)
+data_length    = len(Time_data)
 
-Wetbulb_data = pd.Series(0, index=range(data_length))
+Wetbulb_data    = pd.Series(0, index=range(data_length))
 Visibility_data = pd.Series(0, index=range(data_length))
-DNI_data = pd.Series(0, index=range(data_length))
+DNI_data        = pd.Series(0, index=range(data_length))
 
 data_dict = {
     "Time" : Time_data,

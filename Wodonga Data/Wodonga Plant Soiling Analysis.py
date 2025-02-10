@@ -261,6 +261,8 @@ def calc_cleanliness(cumulative_soiled_area, incidence_angle_rad):
 #     reflectance[i][0] = 1.0
 
 # Cleanliness based cleaning schedule
+# At the end of each day, the average field cleanliness is calculated. If this goes below the cleanliness threshold, the
+# cumulative soiled area of all panels are reset to 0.
 cumulative_soiled_area = np.zeros_like(delta_soiled_area)
 panel_cleanliness = np.ones_like(delta_soiled_area)
 cleanliness_threshold = 0.8
@@ -324,8 +326,6 @@ data = {
     "Theta T [rad]"   : transversal_angles,
 }
 
-# The 3 for loops below append the heliostat tilts, hourly changes in soiled area, and cumulative soiled area for 
-# each heliostat into the data dictionary created above.
 for i in range(num_heliostats):
     key = f"Heliostat tilt [deg] {i+1}"
     data[key] = np.rad2deg(tilt_angles_rad[i, :])
