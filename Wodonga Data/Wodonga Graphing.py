@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt 
 import os
+from datetime import datetime, time
 
 # Finding the script's directory to then find the data csv files produced in previous scripts.
 current_script_path = os.path.abspath(__file__)           
@@ -153,6 +154,31 @@ for i in range(len(t_avg_peak)):
     t_avg_peak[i] = t_avg_peak[i] * (5/60)
 
 #%%
+# Energy Analysis
+
+# Finding the indexes of the first of each month
+month_indexes = []
+
+for i in range(num_timesteps):
+    date_obj = datetime.fromisoformat(df_soiled_data["Date"][i])
+    day = date_obj.day
+    is_midnight = date_obj.time()
+
+    if day == 1 and is_midnight == time(0,0,0):
+        month_indexes.append(i)
+
+DNI_months = []
+
+
+#for i in range(len(month_indexes)):
+
+
+
+
+
+
+
+#%%
 # Plotting data...
 
 t = np.arange(num_timesteps)
@@ -268,6 +294,23 @@ plt.show()
 # plt.grid(True)
 # plt.tight_layout()
 # plt.show()
+
+
+
+# %%
+csv_path = os.path.join(current_directory, "Wodonga Data\\Wodonga Soiled Data.csv")
+df = pd.read_csv(csv_path)
+
+DNI = df["DNI [W/m2]"].to_numpy()
+
+fig, ax1 = plt.subplots(figsize=(12, 6))
+ax1.plot(t, DNI, color="blue")
+ax1.set_xlabel("Time [Hours]")
+ax1.set_ylabel("DNI [W/m2]", color="blue")
+ax1.set_title('Comparing the Average Field Cleanliness to the Average Optical and Field Efficiencies')
+ax1.tick_params(axis="y", labelcolor="blue")
+ax1.grid(True)
+plt.show()
 
 
 

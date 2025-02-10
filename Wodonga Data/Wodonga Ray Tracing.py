@@ -29,24 +29,20 @@ from optical_geometrical_setup import op_receiver_surface
 from optical_geometrical_setup import op_secondaryReflector_surface
 from optical_geometrical_setup import trapezoidal_secondary_reflector
 
-csv_path = current_directory + "\\Wodonga Data\\Wodonga Soiled Data.csv"
+csv_path = current_directory + "\\Wodonga Data\\Wodonga Clean Data.csv"
 df = pd.read_csv(csv_path)
 
 # LFR Plant Setup 
 csv_path = current_directory + "\\Wodonga Data\\Wodonga Simulation Parameters.csv"
-lat, lon, hour_offset, receiver_height, receiver_length, receiver_diameter, panel_length, panel_width, panel_height, panel_spacing, panels_min_max, slope_error, specularity_error, CPC_depth, aperture_angle = import_simulation_parameters(pd.read_csv(csv_path))
+lat, lon, hour_offset, receiver_height, receiver_length, receiver_diameter, panel_length, panel_width, panel_height, panel_spacing, panel_positions, slope_error, specularity_error, CPC_depth, aperture_angle = import_simulation_parameters(pd.read_csv(csv_path))
+receiver_height -= panel_height   
+panel_height = 0
 receiver_position = [0, 0, receiver_height]
-panel_positions = np.arange(panels_min_max[0], panels_min_max[1], panel_width + panel_spacing) 
-num_heliostats = len(panel_positions)                                
-
-A_aperture = len(panel_positions) * panel_width * panel_length
-
+num_heliostats = len(panel_positions)
+aperture = len(panel_positions) * panel_width * panel_length
 stg1_length = panel_length 
-stg1_width = panel_width * len(panel_positions) + panel_spacing * (len(panel_positions) - 1) 
-distance_multiplier = 10                               # Scaling factor which pushes the fictitious surface away from the solar field.
-x_shift = (panel_positions[0] + panel_positions[-1])/2 # As the solar field is not exactly centered along the x-axis, there is a shift 
-                                                       # required for the aiming algorithm.
-z_shift = panel_height/10 # Similarly to the x_shift, there is also a positional shift vertically from the height of the panels.
+stg1_width = panel_width * num_heliostats + panel_spacing * (num_heliostats - 1) 
+distance_multiplier = 10 # Scaling factor which pushes the fictitious surface away from the solar field.
 
 # Extracting the data required from the soiled_data.csv
 azimuths_deg = df['Azimuth [deg]'].to_numpy()
@@ -106,10 +102,10 @@ def ray_trace(i):
 
         optics_fictitious = op_fictitious_surface(PT, slope_error, specularity_error)
         el1 = stg1.add_element()
-        el1.position = Point(distance_multiplier*(sun_position[0] + x_shift), 
+        el1.position = Point(distance_multiplier*sun_position[0], 
                              distance_multiplier*sun_position[1], 
-                             distance_multiplier*(sun_position[2] + z_shift))
-        el1.aim = Point(distance_multiplier*(sun_position[0]+x_shift), distance_multiplier*sun_position[1], 0)
+                             distance_multiplier*sun_position[2])
+        el1.aim = Point(distance_multiplier*sun_position[0], distance_multiplier*sun_position[1], 0)
         el1.surface_flat()
         el1.aperture_rectangle(stg1_width, stg1_length)
         el1.optic = optics_fictitious
@@ -175,7 +171,6 @@ def ray_trace(i):
         if mirrors_hits != 0:
 
             ppr = PT.powerperray  # (DNI / number of rays) * area * cos(zenith), where the area being hit is the fictitious surface.
-            aperture = len(panel_positions) * panel_width * panel_length
 
             optical_efficiency = receiver_abs / mirrors_hits
             field_efficiency = (receiver_abs * ppr) / (PT.dni * aperture)
@@ -205,7 +200,7 @@ if __name__ == "__main__":
     print('Time Taken:', end_multi - start_multi)
 
     # Appending the results to a csv
-    filepath = current_directory + '\\Wodonga Data\\Wodonga Raytrace Results.csv'
+    filepath = current_directory + '\\Wodonga Data\\Wodonga Raytrace Results - Clean.csv'
 
     optical_efficiency = []
     field_efficiency = []

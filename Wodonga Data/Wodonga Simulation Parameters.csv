@@ -3,15 +3,14 @@ Latitude,-36.12179
 Longitude,146.88809
 Timezone Offset [Hours],10
 Receiver Height [m],4.5
-Receiver Length [m],12
+Receiver Length [m],12.18
 Receiver Diameter [m],0.15
-Panel Length [m],12
+Panel Length [m],12.18
 Panel Width [m],0.5
 Panel Height [m],0.5
 Panel Spacing [m],0.2
-Panel Positions [m],"[-3.5, 3.75]"
+Panel Positions [m],"[-3.5, -2.8, -2.1, -1.4, -0.7, 0.01, 0.7, 1.4, 2.1, 2.8, 3.5]"
 Slope Error [mrad],0.1
 Specularity Error [mrad],0.1
-PSR Divisions,16
-PSR Focal Length [m],0.05
-PSR Diameter [m],0.2
+CPC Depth [m],0.11
+Aperture Angle [deg],60

@@ -46,10 +46,11 @@ from raytracing_soiling_functions import find_normal
 
 # LFR Plant Setup 
 csv_path = os.path.join(wodonga_path, "Wodonga Simulation Parameters.csv")
-lat, lon, hour_offset, receiver_height, receiver_length, receiver_diameter, panel_length, panel_width, panel_height, panel_spacing, panels_min_max, slope_error, specularity_error, CPC_depth, aperture_angle = import_simulation_parameters(pd.read_csv(csv_path))
+lat, lon, hour_offset, receiver_height, receiver_length, receiver_diameter, panel_length, panel_width, panel_height, panel_spacing, panel_positions, slope_error, specularity_error, CPC_depth, aperture_angle = import_simulation_parameters(pd.read_csv(csv_path))
+receiver_height -= panel_height   
+panel_height = 0
 receiver_position = [0, 0, receiver_height]
-panel_positions = np.arange(panels_min_max[0], panels_min_max[1], panel_width + panel_spacing) 
-num_heliostats = len(panel_positions)                                
+num_heliostats = len(panel_positions)                       
 
 # File paths to data sheets
 file_params = wodonga_path + "\\parameters_wodonga_experiments.xlsx"
@@ -67,7 +68,6 @@ Time_data = Time_data.apply(add_timezone)
 # Initialise and load simulation data to the physical model.
 sim_data = smb.simulation_inputs(file_weather, dust_type="PM10", verbose=False)
 physical_model = smb.physical_base()
-physical_model.hrz0 = 50
 physical_model.latitude = lat
 physical_model.longitude = lon
 physical_model.import_site_data_and_constants(file_params)
@@ -232,7 +232,7 @@ physical_model.calculate_delta_soiled_area(sim_data, sigma_dep=sigma_dep, verbos
 delta_soiled_area = physical_model.helios.delta_soiled_area[0]
 
 #%%
-# Finding the equivalent reflectance of each panel for each hour of the year
+# Finding the equivalent reflectance / cleanliness of each panel for each timestep
 
 def h(phi):
     return 2/(np.cos(phi))
@@ -304,7 +304,7 @@ for i in range(num_heliostats):
 
 plt.xlabel("Time")
 plt.ylabel("Heliostat Cleanliness")
-plt.title("Change In Heliostat Reflectance Over Time")
+plt.title("Change In Heliostat Cleanliness Over Time")
 plt.legend()
 plt.grid(True)
 plt.tight_layout()

@@ -36,19 +36,15 @@ from optical_geometrical_setup import trapezoidal_secondary_reflector
 
 # LFR Plant Setup 
 csv_path = os.path.join(wodonga_path, "Wodonga Simulation Parameters.csv")
-lat, lon, hour_offset, receiver_height, receiver_length, receiver_diameter, panel_length, panel_width, panel_height, panel_spacing, panels_min_max, slope_error, specularity_error, CPC_depth, aperture_angle = import_simulation_parameters(pd.read_csv(csv_path))
+lat, lon, hour_offset, receiver_height, receiver_length, receiver_diameter, panel_length, panel_width, panel_height, panel_spacing, panel_positions, slope_error, specularity_error, CPC_depth, aperture_angle = import_simulation_parameters(pd.read_csv(csv_path))
+receiver_height -= panel_height   
+panel_height = 0
 receiver_position = [0, 0, receiver_height]
-panel_positions = np.arange(panels_min_max[0], panels_min_max[1], panel_width + panel_spacing) 
-num_heliostats = len(panel_positions)  
-
-A_aperture = len(panel_positions) * panel_width * panel_length
-
+num_heliostats = len(panel_positions)
+aperture = len(panel_positions) * panel_width * panel_length
 stg1_length = panel_length 
 stg1_width = panel_width * len(panel_positions) + panel_spacing * (len(panel_positions) - 1) 
 distance_multiplier = 10                               # Scaling factor which pushes the fictitious surface away from the solar field.
-x_shift = (panel_positions[0] + panel_positions[-1])/2 # As the solar field is not exactly centered along the x-axis, there is a shift 
-                                                       # required for the aiming algorithm.
-z_shift = panel_height/10 # Similarly to the x_shift, there is also a positional shift vertically from the height of the panels.
 
 # Extracting the data required from the Wodonga Soiled Data.csv
 csv_path = current_directory + "\\Wodonga Data\\Wodonga Soiled Data.csv"
@@ -80,14 +76,18 @@ tilts_rad = np.deg2rad(tilts_deg)
 delta_soiled_areas = df[delta_soiled_area_header_list].to_numpy().T
 incident_angles_rad = df[incident_angle_header_list].to_numpy().T
 
+csv_path = current_directory + "\\Wodonga Data\\Wodonga Raytrace Results - Clean.csv"
+df = pd.read_csv(csv_path)
+field_efficiencies_clean = df['Field efficiency'].to_numpy()
+
 # Simulating the solar field for every hour of the year
 start_time = time.time()
 optical_efficiencies = []
 peak_efficiency = []
 efficiency = []
 cumulative_soiled_area = np.zeros_like(delta_soiled_areas)
-reflectance = np.zeros_like(delta_soiled_areas)
-reflectance_clean = np.ones_like(delta_soiled_areas)
+cleanliness = np.zeros_like(delta_soiled_areas)
+cleanliness_clean = np.ones_like(delta_soiled_areas)
 
 day_soiled = []
 day_clean = []
@@ -110,10 +110,10 @@ def shouldClean(soiled_efficiency, clean_efficiency, cleanliness_ratio):
 def h(phi):
     return 2/(np.cos(phi))
 
-def calc_reflectance(nominal_reflectance, cumulative_soiled_area, incidence_angle_rad):
-    return nominal_reflectance * (1 - cumulative_soiled_area * h(incidence_angle_rad))
+def calc_cleanliness(cumulative_soiled_area, incidence_angle_rad):
+    return 1 - cumulative_soiled_area * h(incidence_angle_rad)
 
-def ray_trace(i, reflectances, DNI, sun_position):
+def ray_trace(i, cleanlinesses, DNI, sun_position):
 
     if elevations_deg[i] > 0: # Only simulate raytracing if the sun is above the horizon.
         # Create API class instance
@@ -132,10 +132,10 @@ def ray_trace(i, reflectances, DNI, sun_position):
 
         optics_fictitious = op_fictitious_surface(PT, slope_error, specularity_error)
         el1 = stg1.add_element()
-        el1.position = Point(distance_multiplier*(sun_position[0] + x_shift), 
+        el1.position = Point(distance_multiplier*sun_position[0], 
                              distance_multiplier*sun_position[1], 
-                             distance_multiplier*(sun_position[2] + z_shift))
-        el1.aim = Point(distance_multiplier*(sun_position[0]+x_shift), distance_multiplier*sun_position[1], 0)
+                             distance_multiplier*sun_position[2])
+        el1.aim = Point(distance_multiplier*sun_position[0], distance_multiplier*sun_position[1], 0)
         el1.surface_flat()
         el1.aperture_rectangle(stg1_width, stg1_length)
         el1.optic = optics_fictitious
@@ -151,7 +151,7 @@ def ray_trace(i, reflectances, DNI, sun_position):
         stg3 = PT.add_stage()
         stg3.position = Point(0,0,0)
         for p in range(num_heliostats):
-            optics_heliostat_p = op_heliostat_surface(PT, slope_error, specularity_error, reflectances[p][i], p)
+            optics_heliostat_p = op_heliostat_surface(PT, slope_error, specularity_error, cleanlinesses[p][i], p)
 
             heliostat_position = [panel_positions[p], 0, panel_height]
             panel_normal = calculate_panel_normal(tilts_rad[p][i])
@@ -197,7 +197,6 @@ def ray_trace(i, reflectances, DNI, sun_position):
     
         if mirrors_hits != 0:
             ppr = PT.powerperray
-            aperture = len(panel_positions) * panel_width * panel_length
             field_efficiency = (receiver_abs * ppr) / (PT.dni * aperture)
 
         else:
@@ -217,7 +216,7 @@ def multi_func(i):
     for p in range(num_heliostats):
         if i != 0:
             cumulative_soiled_area[p, i] = cumulative_soiled_area[p, i-1] + delta_soiled_areas[p, i]
-        reflectance[p, i] = calc_reflectance(nominal_reflectance, cumulative_soiled_area[p, i], incident_angles_rad[p, i])
+        cleanliness[p, i] = calc_cleanliness(cumulative_soiled_area[p, i], incident_angles_rad[p, i])
 
     # Raytracing to find optical efficiency
     azimuth_rad = azimuths_rad[i]
@@ -225,8 +224,8 @@ def multi_func(i):
     DNI = DNI_values[i]
     sun_position = np.array([np.sin(azimuth_rad)*np.sin(zenith_rad), np.cos(azimuth_rad)*np.sin(zenith_rad), np.cos(zenith_rad)])
 
-    field_efficiency = ray_trace(i, reflectance, DNI, sun_position)
-    field_efficiency_clean = ray_trace(i, reflectance_clean, DNI, sun_position)
+    field_efficiency = ray_trace(i, cleanliness, DNI, sun_position)
+    field_efficiency_clean = field_efficiencies_clean[i]
 
     D_optical_efficiency = field_efficiency * DNI
     D_optical_efficiency_clean = field_efficiency_clean * DNI
@@ -284,8 +283,8 @@ for i in range(num_heliostats):
     key = f"Cumulative Soiled Area [m2/m2] {i+1}"
     data[key] = cumulative_soiled_area[i]
 for i in range(num_heliostats):
-    key = f"Heliostat Reflectance {i+1}"
-    data[key] = reflectance[i]
+    key = f"Heliostat Cleanliness {i+1}"
+    data[key] = cleanliness[i]
 
 
 df = pd.DataFrame(data)
