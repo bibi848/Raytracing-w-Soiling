@@ -12,12 +12,13 @@ Folders:
 <br><br>
 Files:
 * `ALL_DATA_WODONGA.xlsx`: Collected data from the Wodonga site provided by the Queensland University of Technology.
-`README.md`: The README file you are currently reading.
-* `Refactoring Wodonga Data.py`: The `ALL_DATA_WODONGA.xlsx` does not present the data in the correct manner. This Python script therefore extracts the required data and also trims the initial data so that the data starts at midnight. 
+* `Hourly DNI and Daily Steam Demand 2027 and Max Future.xlsx`: Data provided by Mars Petcare for the industrial heat application of the LFR plant.
+*`README.md`: The README file you are currently reading.
+* `Refactoring Wodonga Data.py`: The `ALL_DATA_WODONGA.xlsx` does not present the data in the correct manner. This Python script therefore extracts the required data and fixes any errors in the given data. 
 * `Wodonga Data Refactored.xlsx`: This is the script produced from `Refactoring Wodonga Data.py`. It contains the weather and dust data which is then used in `Wodonga Plant Soiling Analysis.py`.
 * `Wodonga Graphing.py`: This script is used to analyse and graph all data produced from the simulations.
 * `Wodonga Plant Soiling Analysis.py`: This script computes the soiling analysis for the designed LFR plant. It produces `Wodonga Soiled Data.xlsx`, but this file is too large to currently be uploaded to GitHub. To access it, use this repository and it will be created on your local system.
-* `Wodonga Ray Tracing.py`: From the the soiling analysis, the LFR plant is subjected to the ray tracing simulations. This produces `Wodonga Raytrace Results.csv`.
+* `Wodonga Ray Tracing.py`: From the the soiling analysis, the LFR plant is subjected to the ray tracing simulations. This produces `Wodonga Raytrace Results.csv` and `Wodonga Raytrace Results - Clean`
 * `Wodonga Simulation Parameters.csv`: This contains the physical parameters for the design of the LFR plant.
 * `parameters_wodonga_experiements.xlsx`: This contains other parameters relating to the location of the Wodonga plant, such as some heliostat and air constants.
 
