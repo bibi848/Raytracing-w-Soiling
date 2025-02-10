@@ -30,6 +30,7 @@ elevations_deg = df_soiled_data['Elevation [deg]'].to_numpy()
 elevations_rad = np.deg2rad(elevations_deg)
 num_timesteps = len(df_soiled_data['Date'].to_numpy())
 DNI_day_sums = df_soiled_data["DNI Sum Per Day"].to_numpy()
+DNI_all = df_soiled_data["DNI [W/m2]"].to_numpy()
 
 num_heliostats = 11
 
@@ -167,16 +168,48 @@ for i in range(num_timesteps):
     if day == 1 and is_midnight == time(0,0,0):
         month_indexes.append(i)
 
-DNI_months = []
+# Finding the energy generated each timestep
+
+def calc_energy(field_efficiency, DNI, field_area, receiver_efficiency):
+    return field_efficiency * DNI * field_area * receiver_efficiency
+
+field_area = 67 #m^2
+receiver_efficiency = 0.9
+energy_generated = []
+energy_generated_clean = []
+
+for i in range(num_timesteps):
+
+    DNI_ts = DNI_all[i]
+    field_efficiency_ts = field_efficiencies[i]
+    field_efficiency_ts_clean = field_efficiencies_clean[i]
+
+    ener = calc_energy(field_efficiency_ts, DNI_ts, field_area, receiver_efficiency)
+    ener_clean = calc_energy(field_efficiency_ts_clean, DNI_ts, field_area, receiver_efficiency)
+
+    energy_generated.append(ener)
+    energy_generated_clean.append(ener_clean)
 
 
-#for i in range(len(month_indexes)):
+# Grouping the energy per month
+energy_generated_months = []
+energy_generated_clean_months = []
+
+for i in range(len(month_indexes)-1):
+    start = month_indexes[i]
+    end = month_indexes[i+1]
+
+    month_sum = sum(energy_generated[start:end])
+    month_sum_clean = sum(energy_generated_clean[start:end])
+
+    energy_generated_months.append(month_sum)
+    energy_generated_clean_months.append(month_sum_clean)
 
 
-
-
-
-
+labels = ["Jun '21", "Jul '21", "Aug '21", "Sep '21", "Oct '21", "Nov '21", "Dec '21",
+          "Jan '22", "Feb '22", "Mar '22", "Apr '22", "May '22", "Jun '22", "Jul '22",
+          "Aug '22", "Sep '22", "Oct '22", "Nov '22", "Dec '22", "Jan '23", 
+          ]
 
 #%%
 # Plotting data...
@@ -261,9 +294,6 @@ df_raytrace_results = pd.read_csv(csv_path)
 D_eff = df_raytrace_results['DNI Corrected Efficiency [per day]'].to_numpy()[:636]
 D_eff_clean = df_raytrace_results['DNI Corrected Efficiency (clean) [per day]'].to_numpy()[:636]
 
-
-t = np.arange(num_timesteps)
-
 fig, ax1 = plt.subplots(figsize=(12, 6))
 ax1.plot(t_avg_peak, D_eff_clean, color= 'blue', label= 'Clean Avg Efficiencies')
 ax1.plot(t_avg_peak, D_eff, color = 'red', label = 'Soiled Avg Efficiencies')
@@ -313,5 +343,52 @@ ax1.grid(True)
 plt.show()
 
 
+
+# %%
+fig, ax1 = plt.subplots(figsize=(12, 5))
+x = np.arange(len(labels))
+
+ax1.bar(x, energy_generated_clean_months, color='gray', width=0.4, alpha=0.5, label="Potential")
+ax1.bar(x, energy_generated_months, color='blue', width=0.4, label="Actual")
+
+ax1.set_xticks(x)
+ax1.set_xticklabels(labels, rotation=45)
+ax1.set_ylabel("Total Energy per Month [W]")
+ax1.set_title("Energy Production Across Different Months")
+ax1.legend()
+
+plt.show()
+
+fig, ax1 = plt.subplots(figsize=(12, 6))
+ax1.plot(t, energy_generated_clean, color= 'blue', label= 'Clean')
+ax1.plot(t, energy_generated, color = 'red', label = 'Soiled')
+ax1.axvline(8500, color = 'red', linestyle = ':', linewidth = 2)
+ax1.axvline(10500, color = 'red', linestyle = ':', linewidth = 2)
+ax1.set_xlabel("Time [Hours]")
+ax1.set_ylabel("Energy Generated [W]")
+ax1.set_title('Comparing the Clean and Dirty Energy Generations')
+ax1.legend()
+ax1.grid(True)
+plt.show()
+
+#%%
+# IAM variation over a day
+
+# IAM = field efficiency / 0.686
+IAMs = []
+for i in range(num_timesteps):
+    IAMs.append(field_efficiencies[i]/0.686)
+
+
+t = np.arange(num_timesteps)
+
+fig, ax1 = plt.subplots()
+ax1.plot(t[4120:4240], field_efficiencies[4120:4240], color= 'blue')
+ax1.plot(t[4120:4240], IAMs[4120:4240], color= 'green')
+ax1.set_xlabel("Time [Hours]")
+ax1.set_ylabel("IAM")
+ax1.set_title('Variation of IAM over a single day')
+ax1.grid(True)
+plt.show()
 
 # %%
