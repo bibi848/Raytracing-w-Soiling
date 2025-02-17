@@ -29,7 +29,7 @@ from optical_geometrical_setup import op_receiver_surface
 from optical_geometrical_setup import op_secondaryReflector_surface
 from optical_geometrical_setup import trapezoidal_secondary_reflector
 
-csv_path = wodonga_path + "\\Wodonga Data\\Wodonga Clean Data.csv"
+csv_path = wodonga_path + "\\Wodonga Data\\Wodonga Soiled Data.csv"
 df = pd.read_csv(csv_path)
 
 # LFR Plant Setup 
@@ -218,7 +218,7 @@ if __name__ == "__main__":
     print('Time Taken:', end_multi - start_multi)
 
     # Appending the results to a csv
-    filepath = wodonga_path + '\\Wodonga Data\\Wodonga Raytrace Results - Clean.csv'
+    filepath = wodonga_path + '\\Wodonga Data\\Wodonga Raytrace Results.csv'
 
     optical_efficiency = []
     field_efficiency = []

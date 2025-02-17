@@ -36,7 +36,7 @@ receiver_height -= panel_height    # This height correction is done for proper a
 panel_height = 0                   # By bringing the panels to the ground, it removes the need for x and z shifts of the fictitious surface to aim on the field properly.
 stg1_length = panel_length 
 stg1_width = panel_width * num_heliostats + panel_spacing * (num_heliostats - 1) 
-aperture = panel_width * num_heliostats
+aperture = panel_length * panel_width * num_heliostats
 distance_multiplier = 10 # Scaling factor which pushes the fictitious surface away from the solar field.
 
 panel_x_shift = panel_width + panel_spacing
@@ -47,10 +47,10 @@ for i in range(num_heliostats):
     panel_positions.append(panel_pos)
     panel_pos += panel_x_shift
 
-panel_positions = [panel_positions[i:i + panels_per_module] for i in range(0, len(panel_positions), panels_per_module)]
+panel_positions_b = [panel_positions[i:i + panels_per_module] for i in range(0, len(panel_positions), panels_per_module)]
 
 receiver_positions = []
-for module in panel_positions:
+for module in panel_positions_b:
     avg = (module[0] + module[-1]) / 2
     receiver_positions.append(avg)
 
@@ -133,22 +133,20 @@ def ray_trace(i):
         stg3 = PT.add_stage()
         stg3.name = 'Stage 3: Heliostats'
         stg3.position = Point(0,0,0)
-        for x in range(len(receiver_positions)):
-            receiver_position = [receiver_positions[x], 0, receiver_height]
 
-            for p in range(panels_per_module):
-                optics_heliostat_p = op_heliostat_surface(PT, slope_error, specularity_error, reflectances[p][i], p)
+        for p in range(num_heliostats):
+            optics_heliostat_p = op_heliostat_surface(PT, slope_error, specularity_error, reflectances[p][i], p)
 
-                heliostat_position = [panel_positions[x][p], 0, panel_height]
-                panel_normal = calculate_panel_normal(tilts_rad[p][i])
+            heliostat_position = [panel_positions[p], 0, panel_height]
+            panel_normal = calculate_panel_normal(tilts_rad[p][i])
 
-                el3 = stg3.add_element()
-                el3.position = Point(*heliostat_position)
-                aim = heliostat_position + 1000*panel_normal
-                el3.aim = Point(*aim)
-                el3.optic = optics_heliostat_p
-                el3.surface_flat()
-                el3.aperture_rectangle(panel_width, panel_length)
+            el3 = stg3.add_element()
+            el3.position = Point(*heliostat_position)
+            aim = heliostat_position + 1000*panel_normal
+            el3.aim = Point(*aim)
+            el3.optic = optics_heliostat_p
+            el3.surface_flat()
+            el3.aperture_rectangle(panel_width, panel_length)
 
         # Stage 4, Receiver & Secondary Reflector
         stg4 = PT.add_stage()
@@ -156,19 +154,17 @@ def ray_trace(i):
         stg4.name = 'Stage 4: Receiver & Secondary Reflector'
         stg4.position = Point(0,0,0)
         optics_receiver = op_receiver_surface(PT)
+        optics_secondary = op_secondaryReflector_surface(PT, slope_error, specularity_error)
 
-        for x in range(len(receiver_positions)):
-            receiver_position = [receiver_positions[x], 0, receiver_height]
-
+        for receiver_position in receiver_positions:
             el4 = stg4.add_element()
-            el4.position = Point(*receiver_position)
-            el4.aim = Point(0,0,0)
             el4.optic = optics_receiver
             el4.surface_cylindrical(receiver_diameter/2)
             el4.aperture_singleax_curve(0, 0, receiver_length) # (inner coordinate of revolved section, outer coordinate of revolved section, 
                                                                # length of revolved section along axis of revolution)
-            optics_secondary = op_secondaryReflector_surface(PT, slope_error, specularity_error)
-            el4 = trapezoidal_secondary_reflector(stg4, optics_secondary, receiver_height, receiver_length, receiver_positions[x])
+
+            el4.position = Point(*[receiver_position, 0, receiver_height])
+            el41 = trapezoidal_secondary_reflector(stg4, optics_secondary, receiver_height, receiver_length, receiver_position)
 
         # Simulation Parameters
         PT.num_ray_hits = 1e4
@@ -182,9 +178,9 @@ def ray_trace(i):
         # Field Parameters
         df = PT.raydata  # Extracting the ray data from the simulation
 
-        mirrors_hits = df[(df['stage']==3) & (df['element'] != 0)]['number'].unique().shape[0] # Number of rays hitting stage 3
-        receiver_abs = df[(df['stage'] == 4) & (df['element'] == -1)].shape[0]                 # Number of rays hitting receiver from mirrors
-    
+        mirrors_hits = df[(df['stage']==3) & (df['element'] != 0)]['number'].unique().shape[0]  # Number of rays hitting stage 3
+        receiver_abs = df[(df['stage'] == 4) & (df['element'] < 0)]['number'].unique().shape[0] # Number of rays hitting receiver from mirrors    
+
         if mirrors_hits != 0:
 
             ppr = PT.powerperray  # (DNI / number of rays) * area * cos(zenith), where the area being hit is the fictitious surface.

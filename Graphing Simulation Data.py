@@ -11,6 +11,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+from raytracing_soiling_functions import import_simulation_parameters
 
 # Finding the script's directory to then find the data csv files produced in previous scripts.
 current_script_path = os.path.abspath(__file__)           
@@ -27,7 +28,10 @@ elevations_deg = df_soiled_data['Elevation [deg]'].to_numpy()
 elevations_rad = np.deg2rad(elevations_deg)
 num_timesteps = len(df_soiled_data['Date'].to_numpy())
 
-num_heliostats = 22
+csv_path = current_directory + "\\CSV Files\\Simulation Parameters.csv"
+lat, lon, hour_offset, receiver_height, receiver_length, receiver_diameter, panel_length, panel_width, panel_height, panel_spacing, number_of_modules, panels_per_module, slope_error, specularity_error = import_simulation_parameters(pd.read_csv(csv_path))
+num_heliostats = number_of_modules * panels_per_module
+aperture = num_heliostats * panel_length * panel_width
 
 tilt_header_list = []
 reflectance_header_list = []

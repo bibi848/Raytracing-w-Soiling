@@ -125,16 +125,20 @@ for i,date in enumerate(datetime_list):
         transversal_angles.append(theta_T)
 
         # Finding the tilt of the of the heliostat according to the position of the sun
-        for i in range(len(receiver_positions)):
-            receiver_position = [receiver_positions[i], 0, receiver_height]
-            
-            for p, x_position in enumerate(panel_positions):
-                theta_aim = calculate_theta_aim(Xaim=receiver_position[0], Zaim=receiver_position[2], X0=x_position, Z0=panel_height)
-                tilt_angles_rad[p][i] = calculate_tilt(theta_T, theta_aim)
+        q = 0
+        for p in range(num_heliostats):
+            if p != 0 and p != 1 and panels_per_module % p == 0:
+                q += 1
+        
+            receiver_position = [receiver_positions[q], 0, receiver_height]
+            x_position = panel_positions[p]
 
-                distance_vec = find_normal([x_position, 0, panel_height],[0, 0, receiver_height])
-                distance_vec = distance_vec[0:3]/np.linalg.norm(distance_vec[0:3])
-                incidence_angles_rad[p][i] = 0.5 * np.arccos(distance_vec.dot(sn))
+            theta_aim = calculate_theta_aim(Xaim=receiver_position[0], Zaim=receiver_position[2], X0=x_position, Z0=panel_height)
+            tilt_angles_rad[p][i] = calculate_tilt(theta_T, theta_aim)
+
+            distance_vec = find_normal([x_position, 0, panel_height],[0, 0, receiver_height])
+            distance_vec = distance_vec[0:3]/np.linalg.norm(distance_vec[0:3])
+            incidence_angles_rad[p][i] = 0.5 * np.arccos(distance_vec.dot(sn))
 
     else: # When the sun is below the horizon, so it is night and the panels are kept upright.
         for p in range(num_heliostats):

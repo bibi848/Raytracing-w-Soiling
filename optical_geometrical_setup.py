@@ -75,7 +75,10 @@ def op_secondaryReflector_surface(PT, slope_error, specularity_error):
 
 def trapezoidal_secondary_reflector(stg, optics, receiver_height, receiver_length, receiver_position):
 
-    #Temporary
+    # Temporary
+    # For some reason, with multi module CSP plants, the receiver position does not centre properly in the trapezoidal 
+    # secondary reflector geometry. Therefore, I have included manual shifts to fix this, while I have not figured out 
+    # the underlying reason the trapezoidal geometry does not align properly. 
     if receiver_position < 0:
         receiver_position += 0.07
     elif receiver_position > 0:
