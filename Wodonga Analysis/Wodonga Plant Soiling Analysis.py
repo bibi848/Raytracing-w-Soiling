@@ -263,6 +263,17 @@ power2 = np.array([raised_cosine(ts, T=0.2, beta=0.3, peak=13.5, f0=15) for ts i
 
 total_power = baseline_power + power1 + power2 + random_variability
 
+# Plot
+plt.figure(figsize=(10, 5))
+plt.plot(t, total_power)
+plt.xlabel("Time of Day (hours)")
+plt.ylabel("Power (MW)")
+plt.title("Simulated Energy Usage of Plant")
+plt.xticks(np.arange(0, 25, 2))
+plt.yticks(np.arange(1, 20, 2))
+plt.grid()
+plt.show()
+
 energy_demand = []
 i = 0
 u = 0
