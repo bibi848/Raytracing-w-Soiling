@@ -46,11 +46,26 @@ from raytracing_soiling_functions import find_normal
 
 # LFR Plant Setup 
 csv_path = os.path.join(wodonga_path, "Wodonga Data\\Wodonga Simulation Parameters.csv")
-lat, lon, hour_offset, receiver_height, receiver_length, receiver_diameter, panel_length, panel_width, panel_height, panel_spacing, panel_positions, slope_error, specularity_error, CPC_depth, aperture_angle = import_simulation_parameters(pd.read_csv(csv_path))
+lat, lon, hour_offset, receiver_height, receiver_length, receiver_diameter, panel_length, panel_width, panel_height, panel_spacing, number_of_modules, panels_per_module, slope_error, specularity_error = import_simulation_parameters(pd.read_csv(csv_path))
+num_heliostats = number_of_modules * panels_per_module
 receiver_height -= panel_height   
 panel_height = 0
-receiver_position = [0, 0, receiver_height]
-num_heliostats = len(panel_positions)                       
+stg1_width = panel_width * num_heliostats + panel_spacing * (num_heliostats - 1) 
+panel_x_shift = panel_width + panel_spacing
+panel_positions = []
+panel_pos = -stg1_width/2 + panel_width/2
+
+for i in range(num_heliostats):
+    panel_positions.append(panel_pos)
+    panel_pos += panel_x_shift
+
+panel_positions_block = [panel_positions[i:i + panels_per_module] for i in range(0, len(panel_positions), panels_per_module)]
+
+receiver_positions = []
+for module in panel_positions_block:
+    avg = (module[0] + module[-1]) / 2
+    receiver_positions.append(avg)
+             
 
 # File paths to data sheets
 file_params = wodonga_path + "\\Wodonga Data\\parameters_wodonga_experiments.xlsx"
@@ -184,7 +199,7 @@ elevation_angles_deg = [] # These are used to collect data, later placed into th
 azimuth_angles_deg = []
 transversal_angles = []
 for i,date in enumerate(Time_data):
-
+    print(i)
     # Finding the position of the sun
     elevation_deg = solar.get_altitude(lat,lon,date) 
     azimuth_deg = solar.get_azimuth(lat,lon,date)
@@ -202,11 +217,17 @@ for i,date in enumerate(Time_data):
         theta_T = np.arctan(sn[0]/sn[2])
         transversal_angles.append(theta_T)
 
-        # Finding the tilt of the of the heliostat according to the position of the sun
-        for p, x_position in enumerate(panel_positions):
+        q = 0
+        for p in range(num_heliostats):
+            if p != 0 and p != 1 and panels_per_module % p == 0:
+                q += 1
+        
+            receiver_position = [receiver_positions[q], 0, receiver_height]
+            x_position = panel_positions[p]
+
             theta_aim = calculate_theta_aim(Xaim=receiver_position[0], Zaim=receiver_position[2], X0=x_position, Z0=panel_height)
             tilt_angles_rad[p][i] = calculate_tilt(theta_T, theta_aim)
-            
+
             distance_vec = find_normal([x_position, 0, panel_height],[0, 0, receiver_height])
             distance_vec = distance_vec[0:3]/np.linalg.norm(distance_vec[0:3])
             incidence_angles_rad[p][i] = 0.5 * np.arccos(distance_vec.dot(sn))
@@ -218,6 +239,40 @@ for i,date in enumerate(Time_data):
         transversal_angles.append(0)
     
 print('All tilt calculations done')
+
+#%% 
+# Energy Demand
+# f = t time space, T = width, beta = flatness, peak = , f0 = time of peak
+def raised_cosine(f, T, beta, peak, f0):
+    f = f - f0
+    if np.abs(f) <= (1-beta)/(2*T):
+        return peak
+    
+    elif np.abs(f) > (1-beta)/(2*T) and np.abs(f) <= (1+beta)/(2*T):
+        return peak * 0.5 * (1 + np.cos((np.pi * T/ beta) * (np.abs(f) - (1-beta)/(2*T))))
+    
+    else:
+        return 0
+
+t = np.linspace(0, 24, 288)
+
+baseline_power = 3
+random_variability = np.random.normal(0, 0.6, len(t))
+power1 = np.array([raised_cosine(ts, T=0.16, beta=0.3, peak=14, f0=8.5) for ts in t])
+power2 = np.array([raised_cosine(ts, T=0.2, beta=0.3, peak=13.5, f0=15) for ts in t])
+
+total_power = baseline_power + power1 + power2 + random_variability
+
+energy_demand = []
+i = 0
+u = 0
+while i < num_timesteps:
+    energy_demand.append(total_power[u]*1000/3.6)
+    u += 1
+    i += 1
+
+    if u == len(total_power):
+        u = 0
 
 #%%
 # Inputting the calculated tilt angles to the physical model
@@ -239,7 +294,7 @@ eles = pd.Series(elevation_angles_deg)
 max_elevation_indexes = list(eles.groupby(eles.index // 288).idxmax())
 
 #%%
-# Finding the equivalent reflectance / cleanliness of each panel for each timestep
+# Finding the equivalent cleanliness of each panel for each timestep
 
 def h(phi):
     return 2/(np.cos(phi))
@@ -277,25 +332,24 @@ plt.figure(figsize=(12, 6))
 time = np.arange(num_timesteps)
 
 for i in range(num_heliostats):
-    plt.plot(time, cumulative_soiled_area[i, :], label=f"Heliostat {i+1}", linewidth=1.5)
+    plt.plot(time, cumulative_soiled_area[i, :], linewidth=1.5)
 
 plt.xlabel("Time")
 plt.ylabel("Cumulative Soiled Area (m²/m²)")
 plt.title("Soiling of Heliostats Over Time")
-plt.legend()
 plt.grid(True)
 plt.tight_layout()
 plt.show()
 
+
 plt.figure(figsize=(12, 6))
 
 for i in range(num_heliostats):
-    plt.plot(time, panel_cleanliness[i, :], label=f"Heliostat {i+1}", linewidth=1.5)
+    plt.plot(time, panel_cleanliness[i, :], linewidth=1.5)
 
 plt.xlabel("Time")
 plt.ylabel("Heliostat Cleanliness")
 plt.title("Change In Heliostat Cleanliness Over Time")
-plt.legend()
 plt.grid(True)
 plt.tight_layout()
 plt.show()
@@ -312,6 +366,7 @@ data = {
     "DNI [W/m2]"      : DNI,
     "DNI Sum Per Day" : DNI_days,
     "Theta T [rad]"   : transversal_angles,
+    "Energy Demand [kWh]" : energy_demand
 }
 
 for i in range(num_heliostats):

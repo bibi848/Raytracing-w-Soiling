@@ -1,16 +1,17 @@
-Parameter,Values
-Latitude,-31.2
-Longitude,136.816667
-Timezone Offset [Hours],9.5
-Receiver Height [m],4.5
-Receiver Length [m],12
-Receiver Diameter [m],0.15
-Panel Length [m],12
-Panel Width [m],0.5
-Panel Height [m],0.5
-Panel Spacing [m],0.2
-Panel Positions [m],"[-3.85, -3.15, -2.45, -1.75, -1.05, -0.35, 0.35, 1.05, 1.75, 2.45, 3.15, 3.85]"
-Slope Error [mrad],0.1
-Specularity Error [mrad],0.1
-CPC Depth [m],0.11
-Aperture Angle [deg],60
+Parameter,Values,,,,,,,,
+Latitude,-36.12179,,,,,,,,
+Longitude,146.88809,,,,,,,,
+Timezone Offset [Hours],10,,,,,,,Latitude,-31.2
+Receiver Height [m],4.5,,,,,,,Longitude,136.816667
+Receiver Length [m],20,,,,,,,Timezone Offset [Hours],9.5
+Receiver Diameter [m],0.15,,,,,,,Receiver Height [m],4.5
+Panel Length [m],20,,,,,,,Receiver Length [m],20.3
+Panel Width [m],0.5,,,,,,,Receiver Diameter [m],0.15
+Panel Height [m],0.5,,,,,,,Panel Length [m],20.3
+Panel Spacing [m],0.2,,,,,,,Panel Width [m],0.5
+Number of Modules,2,,,,,,,Panel Height [m],0.5
+Panels per Module,11,,,,,,,Panel Spacing [m],0.2
+Slope Error [mrad],0.1,,,,,,,Number of Modules,2
+Specularity Error [mrad],0.1,,,,,,,Panels per Module,11
+,,,,,,,,Slope Error [mrad],0.1
+,,,,,,,,Specularity Error [mrad],0.1

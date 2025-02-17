@@ -42,11 +42,26 @@ from raytracing_soiling_functions import find_normal
 
 # LFR Plant Setup 
 csv_path = os.path.join(current_directory, "CSV Files/Simulation Parameters.csv")
-lat, lon, hour_offset, receiver_height, receiver_length, receiver_diameter, panel_length, panel_width, panel_height, panel_spacing, panel_positions, slope_error, specularity_error, CPC_depth, aperture_angle = import_simulation_parameters(pd.read_csv(csv_path))
+lat, lon, hour_offset, receiver_height, receiver_length, receiver_diameter, panel_length, panel_width, panel_height, panel_spacing, number_of_modules, panels_per_module, slope_error, specularity_error = import_simulation_parameters(pd.read_csv(csv_path))
 receiver_height -= panel_height   
 panel_height = 0
-receiver_position = [0, 0, receiver_height]
-num_heliostats = len(panel_positions)                                
+num_heliostats = number_of_modules * panels_per_module
+stg1_width = panel_width * num_heliostats + panel_spacing * (num_heliostats - 1) 
+
+panel_x_shift = panel_width + panel_spacing
+panel_positions = []
+panel_pos = -stg1_width/2 + panel_width/2
+
+for i in range(num_heliostats):
+    panel_positions.append(panel_pos)
+    panel_pos += panel_x_shift
+
+panel_positions_b = [panel_positions[i:i + panels_per_module] for i in range(0, len(panel_positions), panels_per_module)]
+
+receiver_positions = []
+for module in panel_positions_b:
+    avg = (module[0] + module[-1]) / 2
+    receiver_positions.append(avg)
 
 # File paths to data sheets
 file_params = heliosoil_path + "/woomera_demo/parameters.xlsx"
@@ -110,13 +125,16 @@ for i,date in enumerate(datetime_list):
         transversal_angles.append(theta_T)
 
         # Finding the tilt of the of the heliostat according to the position of the sun
-        for p, x_position in enumerate(panel_positions):
-            theta_aim = calculate_theta_aim(Xaim=receiver_position[0], Zaim=receiver_position[2], X0=x_position, Z0=panel_height)
-            tilt_angles_rad[p][i] = calculate_tilt(theta_T, theta_aim)
+        for i in range(len(receiver_positions)):
+            receiver_position = [receiver_positions[i], 0, receiver_height]
             
-            distance_vec = find_normal([x_position, 0, panel_height],[0, 0, receiver_height])
-            distance_vec = distance_vec[0:3]/np.linalg.norm(distance_vec[0:3])
-            incidence_angles_rad[p][i] = 0.5 * np.arccos(distance_vec.dot(sn))
+            for p, x_position in enumerate(panel_positions):
+                theta_aim = calculate_theta_aim(Xaim=receiver_position[0], Zaim=receiver_position[2], X0=x_position, Z0=panel_height)
+                tilt_angles_rad[p][i] = calculate_tilt(theta_T, theta_aim)
+
+                distance_vec = find_normal([x_position, 0, panel_height],[0, 0, receiver_height])
+                distance_vec = distance_vec[0:3]/np.linalg.norm(distance_vec[0:3])
+                incidence_angles_rad[p][i] = 0.5 * np.arccos(distance_vec.dot(sn))
 
     else: # When the sun is below the horizon, so it is night and the panels are kept upright.
         for p in range(num_heliostats):

@@ -7,6 +7,7 @@ import ast
 # See Aiming Strategy for LFRs for more information.
 def calculate_theta_aim(Xaim, Zaim, X0, Z0):
     V = np.array([Xaim-X0, 0, Zaim - Z0])
+    if V[0] == 0: Xaim += 0.00001
     theta_aim = ((Xaim-X0)/abs(Xaim-X0)) * np.arccos((Zaim - Z0) / (np.linalg.norm(V)))
     return theta_aim
 
@@ -40,11 +41,10 @@ def import_simulation_parameters(dataframe):
     panel_width = float(num[7][1])
     panel_height = float(num[8][1])
     panel_spacing = float(num[9][1])
-    panel_positions = ast.literal_eval(num[10][1])
-    slope_error = float(num[11][1])
-    specularity_error = float(num[12][1])
-    CPC_depth = float(num[13][1])
-    aperture_angle = np.deg2rad(float(num[14][1]))
+    number_of_modules = int(num[10][1])
+    panels_per_module = int(num[11][1])
+    slope_error = float(num[12][1])
+    specularity_error = float(num[13][1])
 
-    return lat, lon, timezoneOffset, receiver_height, receiver_length, receiver_diameter, panel_length, panel_width, panel_height, panel_spacing, panel_positions, slope_error, specularity_error, CPC_depth, aperture_angle
+    return lat, lon, timezoneOffset, receiver_height, receiver_length, receiver_diameter, panel_length, panel_width, panel_height, panel_spacing, number_of_modules, panels_per_module, slope_error, specularity_error
 

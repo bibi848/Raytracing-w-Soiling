@@ -30,15 +30,29 @@ df = pd.read_csv(csv_path)
 
 # LFR Plant Setup 
 csv_path = os.path.join(current_directory, "CSV Files/Simulation Parameters.csv")
-lat, lon, hour_offset, receiver_height, receiver_length, receiver_diameter, panel_length, panel_width, panel_height, panel_spacing, panel_positions, slope_error, specularity_error, CPC_depth, aperture_angle = import_simulation_parameters(pd.read_csv(csv_path))
-receiver_height -= panel_height   
-panel_height = 0
-receiver_position = [0, 0, receiver_height]
-num_heliostats = len(panel_positions)
-aperture = num_heliostats * panel_width * panel_length
+lat, lon, hour_offset, receiver_height, receiver_length, receiver_diameter, panel_length, panel_width, panel_height, panel_spacing, number_of_modules, panels_per_module, slope_error, specularity_error = import_simulation_parameters(pd.read_csv(csv_path))
+num_heliostats = number_of_modules * panels_per_module
+receiver_height -= panel_height    # This height correction is done for proper aiming of the fictitious surface.
+panel_height = 0                   # By bringing the panels to the ground, it removes the need for x and z shifts of the fictitious surface to aim on the field properly.
 stg1_length = panel_length 
-stg1_width = panel_width * len(panel_positions) + panel_spacing * (len(panel_positions) - 1) 
-distance_multiplier = 10                               # Scaling factor which pushes the fictitious surface away from the solar field.
+stg1_width = panel_width * num_heliostats + panel_spacing * (num_heliostats - 1) 
+aperture = panel_width * num_heliostats
+distance_multiplier = 10 # Scaling factor which pushes the fictitious surface away from the solar field.
+
+panel_x_shift = panel_width + panel_spacing
+panel_positions = []
+panel_pos = -stg1_width/2 + panel_width/2
+
+for i in range(num_heliostats):
+    panel_positions.append(panel_pos)
+    panel_pos += panel_x_shift
+
+panel_positions = [panel_positions[i:i + panels_per_module] for i in range(0, len(panel_positions), panels_per_module)]
+
+receiver_positions = []
+for module in panel_positions:
+    avg = (module[0] + module[-1]) / 2
+    receiver_positions.append(avg)
 
 # Extracting the data required from the soiled_data.csv
 azimuths_deg = df['Azimuth [deg]'].to_numpy()
@@ -112,26 +126,30 @@ def ray_trace(i):
         stg2.name = 'Stage 2: Cover'
         stg2.position = Point(0,0,0)
         optics_cover = op_cover_surface(PT, slope_error, specularity_error)
-        el2 = trapezoidal_secondary_reflector(stg2, optics_cover, receiver_height, receiver_length)
+        for receiver_position in receiver_positions:
+            el2 = trapezoidal_secondary_reflector(stg2, optics_cover, receiver_height, receiver_length, receiver_position)
 
         # Stage 3, Heliostats
         stg3 = PT.add_stage()
         stg3.name = 'Stage 3: Heliostats'
         stg3.position = Point(0,0,0)
-        for p in range(num_heliostats):
-            optics_heliostat_p = op_heliostat_surface(PT, slope_error, specularity_error, reflectances[p][i], p)
+        for x in range(len(receiver_positions)):
+            receiver_position = [receiver_positions[x], 0, receiver_height]
 
-            heliostat_position = [panel_positions[p], 0, panel_height]
-            panel_normal = calculate_panel_normal(tilts_rad[p][i])
+            for p in range(panels_per_module):
+                optics_heliostat_p = op_heliostat_surface(PT, slope_error, specularity_error, reflectances[p][i], p)
 
-            el3 = stg3.add_element()
-            el3.position = Point(*heliostat_position)
-            aim = heliostat_position + 1000*panel_normal
-            el3.aim = Point(*aim)
-            el3.optic = optics_heliostat_p
-            el3.surface_flat()
-            el3.aperture_rectangle(panel_width, panel_length)
-    
+                heliostat_position = [panel_positions[x][p], 0, panel_height]
+                panel_normal = calculate_panel_normal(tilts_rad[p][i])
+
+                el3 = stg3.add_element()
+                el3.position = Point(*heliostat_position)
+                aim = heliostat_position + 1000*panel_normal
+                el3.aim = Point(*aim)
+                el3.optic = optics_heliostat_p
+                el3.surface_flat()
+                el3.aperture_rectangle(panel_width, panel_length)
+
         # Stage 4, Receiver & Secondary Reflector
         stg4 = PT.add_stage()
         stg4.is_multihit = True
@@ -139,15 +157,18 @@ def ray_trace(i):
         stg4.position = Point(0,0,0)
         optics_receiver = op_receiver_surface(PT)
 
-        el4 = stg4.add_element()
-        el4.position = Point(*receiver_position)
-        el4.aim = Point(0,0,0)
-        el4.optic = optics_receiver
-        el4.surface_cylindrical(receiver_diameter/2)
-        el4.aperture_singleax_curve(0, 0, receiver_length) # (inner coordinate of revolved section, outer coordinate of revolved section, 
-                                                           # length of revolved section along axis of revolution)
-        optics_secondary = op_secondaryReflector_surface(PT, slope_error, specularity_error)
-        el4 = trapezoidal_secondary_reflector(stg4, optics_secondary, receiver_height, receiver_length)
+        for x in range(len(receiver_positions)):
+            receiver_position = [receiver_positions[x], 0, receiver_height]
+
+            el4 = stg4.add_element()
+            el4.position = Point(*receiver_position)
+            el4.aim = Point(0,0,0)
+            el4.optic = optics_receiver
+            el4.surface_cylindrical(receiver_diameter/2)
+            el4.aperture_singleax_curve(0, 0, receiver_length) # (inner coordinate of revolved section, outer coordinate of revolved section, 
+                                                               # length of revolved section along axis of revolution)
+            optics_secondary = op_secondaryReflector_surface(PT, slope_error, specularity_error)
+            el4 = trapezoidal_secondary_reflector(stg4, optics_secondary, receiver_height, receiver_length, receiver_positions[x])
 
         # Simulation Parameters
         PT.num_ray_hits = 1e4

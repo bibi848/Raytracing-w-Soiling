@@ -27,7 +27,7 @@ elevations_deg = df_soiled_data['Elevation [deg]'].to_numpy()
 elevations_rad = np.deg2rad(elevations_deg)
 num_timesteps = len(df_soiled_data['Date'].to_numpy())
 
-num_heliostats = 12
+num_heliostats = 22
 
 tilt_header_list = []
 reflectance_header_list = []

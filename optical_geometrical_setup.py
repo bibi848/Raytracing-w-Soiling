@@ -73,32 +73,38 @@ def op_secondaryReflector_surface(PT, slope_error, specularity_error):
     optics_secondary.back.specularity_error = specularity_error
     return optics_secondary
 
-def trapezoidal_secondary_reflector(stg, optics, receiver_height, receiver_length):
+def trapezoidal_secondary_reflector(stg, optics, receiver_height, receiver_length, receiver_position):
 
-    spos1 = [-0.15, 0, receiver_height-0.06]
-    spos2 = [0.15, 0, receiver_height-0.06]
-    spos3 = [0, 0, receiver_height+0.04]
+    #Temporary
+    if receiver_position < 0:
+        receiver_position += 0.07
+    elif receiver_position > 0:
+        receiver_position -= 0.07
+
+    spos1 = [-0.15 + receiver_position, 0, receiver_height-0.05] # -0.06
+    spos2 = [0.15 + receiver_position, 0, receiver_height-0.05]  # -0.06
+    spos3 = [receiver_position, 0, receiver_height+0.05]         # +0.04
 
     el = stg.add_element() 
     el.optic = optics
     el.position = Point(*spos1) 
-    el.aim = Point(-300, 0, 275) 
+    el.aim = Point(-300 + receiver_position, 0, 275)
     el.aperture_rectangle(0.27, receiver_length); 
-    el.surface_flat(); 
+    el.surface_flat()
     el.interaction = 2 
 
     el = stg.add_element() 
     el.optic = optics
     el.position = Point(*spos2) 
-    el.aim = Point(300, 0, 275) 
+    el.aim = Point(300 + receiver_position, 0, 275) 
     el.aperture_rectangle(0.27, receiver_length)
-    el.surface_flat(); 
+    el.surface_flat() 
     el.interaction = 2 
 
     el = stg.add_element() 
     el.optic = optics
     el.position = Point(*spos3)  
-    el.aim = Point(0.000001,0,0)
+    el.aim = Point(receiver_position,0,0)
     el.aperture_rectangle(0.12, receiver_length)
     el.surface_flat()
     el.interaction = 2

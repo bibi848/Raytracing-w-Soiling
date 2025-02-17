@@ -29,20 +29,35 @@ from optical_geometrical_setup import op_receiver_surface
 from optical_geometrical_setup import op_secondaryReflector_surface
 from optical_geometrical_setup import trapezoidal_secondary_reflector
 
-csv_path = wodonga_path + "\\Wodonga Data\\Wodonga Soiled Data.csv"
+csv_path = wodonga_path + "\\Wodonga Data\\Wodonga Clean Data.csv"
 df = pd.read_csv(csv_path)
 
 # LFR Plant Setup 
 csv_path = wodonga_path + "\\Wodonga Data\\Wodonga Simulation Parameters.csv"
-lat, lon, hour_offset, receiver_height, receiver_length, receiver_diameter, panel_length, panel_width, panel_height, panel_spacing, panel_positions, slope_error, specularity_error, CPC_depth, aperture_angle = import_simulation_parameters(pd.read_csv(csv_path))
-receiver_height -= panel_height   
-panel_height = 0
-receiver_position = [0, 0, receiver_height]
-num_heliostats = len(panel_positions)
-aperture = num_heliostats * panel_width * panel_length 
+lat, lon, hour_offset, receiver_height, receiver_length, receiver_diameter, panel_length, panel_width, panel_height, panel_spacing, number_of_modules, panels_per_module, slope_error, specularity_error = import_simulation_parameters(pd.read_csv(csv_path))
+num_heliostats = number_of_modules * panels_per_module
+receiver_height -= panel_height    # This height correction is done for proper aiming of the fictitious surface.
+panel_height = 0                   # By bringing the panels to the ground, it removes the need for x and z shifts of the fictitious surface to aim on the field properly.
 stg1_length = panel_length 
 stg1_width = panel_width * num_heliostats + panel_spacing * (num_heliostats - 1) 
-distance_multiplier = 10 # Scaling factor which pushes the fictitious surface away from the solar field.
+distance_multiplier = 13 # Scaling factor which pushes the fictitious surface away from the solar field.
+
+panel_x_shift = panel_width + panel_spacing
+panel_positions = []
+panel_pos = -stg1_width/2 + panel_width/2
+
+for i in range(num_heliostats):
+    panel_positions.append(panel_pos)
+    panel_pos += panel_x_shift
+
+panel_positions_b = [panel_positions[i:i + panels_per_module] for i in range(0, len(panel_positions), panels_per_module)]
+
+receiver_positions = []
+for module in panel_positions_b:
+    avg = (module[0] + module[-1]) / 2
+    receiver_positions.append(avg)
+
+aperture = num_heliostats * panel_length * panel_width
 
 # Extracting the data required from the soiled_data.csv
 azimuths_deg = df['Azimuth [deg]'].to_numpy()
@@ -99,7 +114,7 @@ def ray_trace(i):
         stg1.is_virtual = True
         stg1.name = 'Stage 1: Fictitious Surface'
         stg1.position = Point(0,0,0)
-
+        
         optics_fictitious = op_fictitious_surface(PT, slope_error, specularity_error)
         el1 = stg1.add_element()
         el1.position = Point(distance_multiplier*sun_position[0], 
@@ -116,12 +131,14 @@ def ray_trace(i):
         stg2.name = 'Stage 2: Cover'
         stg2.position = Point(0,0,0)
         optics_cover = op_cover_surface(PT, slope_error, specularity_error)
-        el2 = trapezoidal_secondary_reflector(stg2, optics_cover, receiver_height, receiver_length)
+        for receiver_position in receiver_positions:
+            el2 = trapezoidal_secondary_reflector(stg2, optics_cover, receiver_height, receiver_length, receiver_position)
 
         # Stage 3, Heliostats
         stg3 = PT.add_stage()
         stg3.name = 'Stage 3: Heliostats'
         stg3.position = Point(0,0,0)
+
         for p in range(num_heliostats):
             optics_heliostat_p = op_heliostat_surface(PT, slope_error, specularity_error, cleanlinesses[p][i], p)
 
@@ -142,16 +159,17 @@ def ray_trace(i):
         stg4.name = 'Stage 4: Receiver & Secondary Reflector'
         stg4.position = Point(0,0,0)
         optics_receiver = op_receiver_surface(PT)
-
-        el4 = stg4.add_element()
-        el4.position = Point(*receiver_position)
-        el4.aim = Point(0,0,0)
-        el4.optic = optics_receiver
-        el4.surface_cylindrical(receiver_diameter/2)
-        el4.aperture_singleax_curve(0, 0, receiver_length) # (inner coordinate of revolved section, outer coordinate of revolved section, 
-                                                           # length of revolved section along axis of revolution)
         optics_secondary = op_secondaryReflector_surface(PT, slope_error, specularity_error)
-        el4 = trapezoidal_secondary_reflector(stg4, optics_secondary, receiver_height, receiver_length)
+
+        for receiver_position in receiver_positions:
+            el4 = stg4.add_element()
+            el4.optic = optics_receiver
+            el4.surface_cylindrical(receiver_diameter/2)
+            el4.aperture_singleax_curve(0, 0, receiver_length) # (inner coordinate of revolved section, outer coordinate of revolved section, 
+                                                               # length of revolved section along axis of revolution)
+
+            el4.position = Point(*[receiver_position, 0, receiver_height])
+            el41 = trapezoidal_secondary_reflector(stg4, optics_secondary, receiver_height, receiver_length, receiver_position)
 
         # Simulation Parameters
         PT.num_ray_hits = 1e3
@@ -165,8 +183,8 @@ def ray_trace(i):
         # Field Parameters
         df = PT.raydata  # Extracting the ray data from the simulation
 
-        mirrors_hits = df[(df['stage']==3) & (df['element'] != 0)]['number'].unique().shape[0] # Number of rays hitting stage 3
-        receiver_abs = df[(df['stage'] == 4) & (df['element'] == -1)].shape[0]                 # Number of rays hitting receiver from mirrors
+        mirrors_hits = df[(df['stage']==3) & (df['element'] != 0)]['number'].unique().shape[0]  # Number of rays hitting stage 3
+        receiver_abs = df[(df['stage'] == 4) & (df['element'] < 0)]['number'].unique().shape[0] # Number of rays hitting receiver from mirrors
     
         if mirrors_hits != 0:
 
@@ -200,7 +218,7 @@ if __name__ == "__main__":
     print('Time Taken:', end_multi - start_multi)
 
     # Appending the results to a csv
-    filepath = wodonga_path + '\\Wodonga Data\\Wodonga Raytrace Results.csv'
+    filepath = wodonga_path + '\\Wodonga Data\\Wodonga Raytrace Results - Clean.csv'
 
     optical_efficiency = []
     field_efficiency = []

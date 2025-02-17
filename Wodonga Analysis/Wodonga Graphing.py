@@ -1,19 +1,25 @@
+#%% 
+# Importing Modules and Data...
+
 """
 This script takes the data produced both by the ray tracing and soiling analysis scripts and provides a space where the data can
 be analysed and visulised. 
 """
-#%% 
-# Importing Modules and Data...
+
+# Finding the script's directory to then find the data csv files produced in previous scripts.
+import os
+import sys
+current_script_path = os.path.abspath(__file__)
+wodonga_path = os.path.dirname(current_script_path)
+current_directory = wodonga_path.replace(r"\Wodonga Analysis", "")
+sys.path.append(current_directory)
 
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt 
-import os
+import matplotlib.pyplot as plt
 from datetime import datetime, time
+from raytracing_soiling_functions import import_simulation_parameters
 
-# Finding the script's directory to then find the data csv files produced in previous scripts.
-current_script_path = os.path.abspath(__file__)           
-current_directory = os.path.dirname(current_script_path)[:50] 
 csv_path = os.path.join(current_directory, "Wodonga Analysis\\Wodonga Data\\Wodonga Soiled Data.csv")
 df_soiled_data = pd.read_csv(csv_path)
 csv_path = os.path.join(current_directory, "Wodonga Analysis\\Wodonga Data\\Wodonga Clean Data.csv")
@@ -30,9 +36,13 @@ elevations_deg = df_soiled_data['Elevation [deg]'].to_numpy()
 elevations_rad = np.deg2rad(elevations_deg)
 num_timesteps  = len(df_soiled_data['Date'].to_numpy())
 DNI_day_sums   = df_soiled_data["DNI Sum Per Day"].to_numpy()
-DNI_all = df_soiled_data["DNI [W/m2]"].to_numpy()
+DNI_all        = df_soiled_data["DNI [W/m2]"].to_numpy()
+energy_demand  = df_soiled_data["Energy Demand [kWh]"].to_numpy()
 
-num_heliostats = 11
+csv_path = current_directory + "\\Wodonga Analysis\\Wodonga Data\\Wodonga Simulation Parameters.csv"
+lat, lon, hour_offset, receiver_height, receiver_length, receiver_diameter, panel_length, panel_width, panel_height, panel_spacing, number_of_modules, panels_per_module, slope_error, specularity_error = import_simulation_parameters(pd.read_csv(csv_path))
+num_heliostats = number_of_modules * panels_per_module
+aperture = num_heliostats * panel_length * panel_width
 
 tilt_header_list = []
 cleanliness_header_list = []
@@ -155,7 +165,7 @@ for i in range(len(t_avg_peak)):
     t_avg_peak[i] = t_avg_peak[i] * (5/60)
 
 #%%
-# Energy Analysis
+# Energy Analysis: Energy Generated
 
 # Finding the indexes of the first of each month
 month_indexes = []
@@ -170,10 +180,9 @@ for i in range(num_timesteps):
 
 # Finding the energy generated each timestep
 
-def calc_energy(field_efficiency, DNI, field_area, receiver_efficiency, timestep): # Multiply by timestep for energy, J not W. 
+def calc_energy(field_efficiency, DNI, field_area, receiver_efficiency, timestep):
     return field_efficiency * DNI * field_area * receiver_efficiency * timestep
 
-field_area = 67 # m^2
 receiver_efficiency = 0.9
 energy_generated = []
 energy_generated_clean = []
@@ -184,13 +193,13 @@ for i in range(num_timesteps):
     field_efficiency_ts = field_efficiencies[i]
     field_efficiency_ts_clean = field_efficiencies_clean[i]
 
-    ener = calc_energy(field_efficiency_ts, DNI_ts, field_area, receiver_efficiency, 5*60) / 3600
-    ener_clean = calc_energy(field_efficiency_ts_clean, DNI_ts, field_area, receiver_efficiency, 5*60) / 3600
+    ener = calc_energy(field_efficiency_ts, DNI_ts, aperture, receiver_efficiency, 5*60) / 3600
+    ener_clean = calc_energy(field_efficiency_ts_clean, DNI_ts, aperture, receiver_efficiency, 5*60) / 3600
 
     energy_generated.append(ener)
     energy_generated_clean.append(ener_clean)
 
-# Grouping the energy per month
+# Grouping the energy generated per month
 energy_generated_months = []
 energy_generated_clean_months = []
 
@@ -211,6 +220,9 @@ labels = ["Jun '21", "Jul '21", "Aug '21", "Sep '21", "Oct '21", "Nov '21", "Dec
           ]
 
 #%%
+# Energy Analysis: Usage and Storage
+
+#%%
 # Plotting data...
 
 t = np.arange(num_timesteps)
@@ -222,12 +234,11 @@ for i in range(len(t)):
 fig, ax1 = plt.subplots(figsize=(12,6))
 
 for i in range(num_heliostats):
-    ax1.plot(t, cumulative_soiled_area[i, :], label=f"Panel {i+1}", linewidth=1.5)
+    ax1.plot(t, cumulative_soiled_area[i, :], linewidth=1.5)
 
 ax1.set_xlabel("Time [Hours]")
 ax1.set_ylabel("Cumulative Soiled Area [m2/m2]")
 ax1.set_title("Change in Panel Cumulative Soiled Area")
-ax1.legend()
 ax1.grid(True)
 plt.show()
 
@@ -235,12 +246,11 @@ plt.show()
 fig, ax1 = plt.subplots(figsize=(12, 6))
 
 for i in range(num_heliostats):
-    ax1.plot(t, cleanlinesses[i, :], label=f"Panel {i+1}", linewidth=1.5)
+    ax1.plot(t, cleanlinesses[i, :], linewidth=1.5)
 
 ax1.set_xlabel("Time [Hours]")
 ax1.set_ylabel("Cleanliness")
 ax1.set_title("Change in Panel Cleanliness")
-ax1.legend()
 ax1.grid(True)
 plt.show()
 
@@ -287,46 +297,25 @@ ax1.grid(True)
 plt.show()
 
 # %%
-csv_path = os.path.join(current_directory, "Wodonga Analysis\\Wodonga Data\\Clean Optimisation Test 2.csv")
-df_raytrace_results = pd.read_csv(csv_path)
+# Comparing to cleaning optimisation done with optical efficiency
+# csv_path = os.path.join(current_directory, "Wodonga Analysis\\Wodonga Data\\Clean Optimisation Test 2.csv")
+# df_raytrace_results = pd.read_csv(csv_path)
 
-D_eff = df_raytrace_results['DNI Corrected Efficiency [per day]'].to_numpy()[:636]
-D_eff_clean = df_raytrace_results['DNI Corrected Efficiency (clean) [per day]'].to_numpy()[:636]
+# D_eff = df_raytrace_results['DNI Corrected Efficiency [per day]'].to_numpy()[:636]
+# D_eff_clean = df_raytrace_results['DNI Corrected Efficiency (clean) [per day]'].to_numpy()[:636]
 
-fig, ax1 = plt.subplots(figsize=(12, 6))
-ax1.plot(t_avg_peak, D_eff_clean, color= 'blue', label= 'Clean Avg Efficiencies')
-ax1.plot(t_avg_peak, D_eff, color = 'red', label = 'Soiled Avg Efficiencies')
-ax1.set_xlabel("Time [Hours]")
-ax1.set_ylabel("Average Efficiency")
-ax1.set_title('Comparing the Clean and Dirty Average DNI corrected Efficiencies (based on field efficiencies during raytracing)')
-ax1.legend()
-ax1.grid(True)
-plt.show()
-
-# reflectance_header_list = []
-# for i in range(num_heliostats):
-#     tilt_header = f"Heliostat tilt [deg] {i+1}"
-#     reflectance_header = f"Heliostat Reflectance {i+1}"
-#     tilt_header_list.append(tilt_header)
-#     reflectance_header_list.append(reflectance_header)
-# reflectances = df_raytrace_results[reflectance_header_list].to_numpy().T
-
-
-# plt.figure(figsize=(12, 6))
-# for i in range(num_heliostats):
-#     plt.plot(t, reflectances[i, :], label=f"Heliostat {i+1}", linewidth=1.5)
-
-# plt.xlabel("Time [Hours]")
-# plt.ylabel("Reflectance")
-# plt.title("Change in Heliostat Reflectances")
-# plt.legend()
-# plt.grid(True)
-# plt.tight_layout()
+# fig, ax1 = plt.subplots(figsize=(12, 6))
+# ax1.plot(t_avg_peak, D_eff_clean, color= 'blue', label= 'Clean Avg Efficiencies')
+# ax1.plot(t_avg_peak, D_eff, color = 'red', label = 'Soiled Avg Efficiencies')
+# ax1.set_xlabel("Time [Hours]")
+# ax1.set_ylabel("Average Efficiency")
+# ax1.set_title('Comparing the Clean and Dirty Average DNI corrected Efficiencies (based on field efficiencies during raytracing)')
+# ax1.legend()
+# ax1.grid(True)
 # plt.show()
 
-
-
 # %%
+# DNI across the timeframe.
 csv_path = os.path.join(current_directory, "Wodonga Analysis\\Wodonga Data\\Wodonga Soiled Data.csv")
 df = pd.read_csv(csv_path)
 
@@ -343,6 +332,7 @@ plt.show()
 
 
 # %%
+# Energy Generation
 fig, ax1 = plt.subplots(figsize=(12, 5))
 x = np.arange(len(labels))
 
@@ -366,6 +356,18 @@ ax1.set_xlabel("Time [Hours]")
 ax1.set_ylabel("Energy Generated [kWh]")
 ax1.set_title('Comparing the Clean and Dirty Energy Generations')
 ax1.legend()
+ax1.grid(True)
+plt.show()
+
+#%%
+# Energy Usage
+
+fig, ax1 = plt.subplots(figsize=(12, 6))
+ax1.plot(t, energy_demand, color= 'blue')
+ax1.plot(t, energy_generated, color= 'red')
+ax1.set_xlabel("Time [Hours]")
+ax1.set_ylabel("Energy [kWh]")
+ax1.set_title('Energy Production vs Energy Demand')
 ax1.grid(True)
 plt.show()
 
