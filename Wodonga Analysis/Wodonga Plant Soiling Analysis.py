@@ -267,8 +267,8 @@ total_power = baseline_power + power1 + power2 + random_variability
 plt.figure(figsize=(10, 5))
 plt.plot(t, total_power)
 plt.xlabel("Time of Day (hours)")
-plt.ylabel("Power (MW)")
-plt.title("Simulated Energy Usage of Plant")
+plt.ylabel("Power (MWth)")
+plt.title("Simulated Power Demand")
 plt.xticks(np.arange(0, 25, 2))
 plt.yticks(np.arange(1, 20, 2))
 plt.grid()
@@ -278,12 +278,22 @@ energy_demand = []
 i = 0
 u = 0
 while i < num_timesteps:
-    energy_demand.append(total_power[u]*1000/3.6)
+    energy_demand.append(total_power[u]*1000/12)
     u += 1
     i += 1
 
     if u == len(total_power):
         u = 0
+
+t = list(range(288*1))
+
+plt.figure(figsize=(10, 5))
+plt.plot(t, energy_demand[:288*1])
+plt.xlabel("Time [Hours]")
+plt.ylabel("Energy [kWh]")
+plt.title("Simulated Energy Demand")
+plt.grid()
+plt.show()
 
 #%%
 # Inputting the calculated tilt angles to the physical model

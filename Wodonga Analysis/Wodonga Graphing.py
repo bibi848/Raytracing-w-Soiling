@@ -169,6 +169,7 @@ for i in range(len(t_avg_peak)):
 
 # Finding the indexes of the first of each month
 month_indexes = []
+scale_factor = 5  # If simulated field is smaller than actual field required, this is the multiplication factor.
 
 for i in range(num_timesteps):
     date_obj = datetime.fromisoformat(df_soiled_data["Date"][i])
@@ -179,13 +180,13 @@ for i in range(num_timesteps):
         month_indexes.append(i)
 
 # Finding the energy generated each timestep
-
-def calc_energy(field_efficiency, DNI, field_area, receiver_efficiency, timestep):
-    return field_efficiency * DNI * field_area * receiver_efficiency * timestep
+def calc_power(field_efficiency, DNI, field_area, receiver_efficiency):
+    return field_efficiency * DNI * field_area * receiver_efficiency
 
 receiver_efficiency = 0.9
 energy_generated = []
 energy_generated_clean = []
+power_generated = []
 
 for i in range(num_timesteps):
 
@@ -193,11 +194,15 @@ for i in range(num_timesteps):
     field_efficiency_ts = field_efficiencies[i]
     field_efficiency_ts_clean = field_efficiencies_clean[i]
 
-    ener = calc_energy(field_efficiency_ts, DNI_ts, aperture, receiver_efficiency, 5*60) / 3600
-    ener_clean = calc_energy(field_efficiency_ts_clean, DNI_ts, aperture, receiver_efficiency, 5*60) / 3600
+    power = (scale_factor * calc_power(field_efficiency_ts, DNI_ts, aperture, receiver_efficiency)) / 1000 # kW
+    power_clean = (scale_factor * calc_power(field_efficiency_ts_clean, DNI_ts, aperture, receiver_efficiency)) / 1000
+
+    ener = power / 12 # kWh over a period of 5 minutes
+    ener_clean = power_clean / 12
 
     energy_generated.append(ener)
     energy_generated_clean.append(ener_clean)
+    power_generated.append(power)
 
 # Grouping the energy generated per month
 energy_generated_months = []
@@ -218,9 +223,6 @@ labels = ["Jun '21", "Jul '21", "Aug '21", "Sep '21", "Oct '21", "Nov '21", "Dec
           "Jan '22", "Feb '22", "Mar '22", "Apr '22", "May '22", "Jun '22", "Jul '22",
           "Aug '22", "Sep '22", "Oct '22", "Nov '22", "Dec '22", "Jan '23", 
           ]
-
-#%%
-# Energy Analysis: Usage and Storage
 
 #%%
 # Plotting data...
@@ -297,24 +299,6 @@ ax1.grid(True)
 plt.show()
 
 # %%
-# Comparing to cleaning optimisation done with optical efficiency
-# csv_path = os.path.join(current_directory, "Wodonga Analysis\\Wodonga Data\\Clean Optimisation Test 2.csv")
-# df_raytrace_results = pd.read_csv(csv_path)
-
-# D_eff = df_raytrace_results['DNI Corrected Efficiency [per day]'].to_numpy()[:636]
-# D_eff_clean = df_raytrace_results['DNI Corrected Efficiency (clean) [per day]'].to_numpy()[:636]
-
-# fig, ax1 = plt.subplots(figsize=(12, 6))
-# ax1.plot(t_avg_peak, D_eff_clean, color= 'blue', label= 'Clean Avg Efficiencies')
-# ax1.plot(t_avg_peak, D_eff, color = 'red', label = 'Soiled Avg Efficiencies')
-# ax1.set_xlabel("Time [Hours]")
-# ax1.set_ylabel("Average Efficiency")
-# ax1.set_title('Comparing the Clean and Dirty Average DNI corrected Efficiencies (based on field efficiencies during raytracing)')
-# ax1.legend()
-# ax1.grid(True)
-# plt.show()
-
-# %%
 # DNI across the timeframe.
 csv_path = os.path.join(current_directory, "Wodonga Analysis\\Wodonga Data\\Wodonga Soiled Data.csv")
 df = pd.read_csv(csv_path)
@@ -370,5 +354,3 @@ ax1.set_ylabel("Energy [kWh]")
 ax1.set_title('Energy Production vs Energy Demand')
 ax1.grid(True)
 plt.show()
-
-#%%

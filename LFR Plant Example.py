@@ -40,10 +40,10 @@ lat, lon, hour_offset, receiver_height, receiver_length, receiver_diameter, pane
 # Date and Location
 # Location is Woomera and the date is set as 01/04/2018 at 11:00. This can be changed to any date.
 timezoneOffset = dt.timedelta(hours = hour_offset)
-date = datetime(2021, 5, 21, hour=12, minute=30, second=0, tzinfo=dt.timezone(timezoneOffset))
+date = datetime(2018, 4, 1, hour=11, minute=0, second=0, tzinfo=dt.timezone(timezoneOffset))
 location = Location(lat, lon, dt.timezone(timezoneOffset), 0)
 clear_sky = location.get_clearsky(pd.DatetimeIndex([date]), model = 'ineichen')
-DNI = clear_sky['dni'].values[0]
+DNI = 900 # clear_sky['dni'].values[0]
 
 # Plant layout
 num_heliostats = number_of_modules * panels_per_module
@@ -74,8 +74,10 @@ PT = PySolTrace()
 # Finding the position of the sun
 # All angle conventions are explained in Aiming Strategy for LFRs document. 
 elevation_deg = solar.get_altitude(lat,lon,date) 
-azimuth_deg = solar.get_azimuth(lat,lon,date) 
-zenith_deg = 90 - elevation_deg  
+# azimuth_deg = solar.get_azimuth(lat,lon,date) 
+# zenith_deg = 90 - elevation_deg  
+azimuth_deg = 90 # Reference Condition for LF-11
+zenith_deg = 30  # Reference Condition for LF-11
 elevation_rad, azimuth_rad, zenith_rad = (np.deg2rad(x) for x in [elevation_deg, azimuth_deg, zenith_deg])
 
 # Describing the sun's position in terms of the azimuth and zenith. The full breakdown for this result is shown in
@@ -219,3 +221,6 @@ print('Receiver:', receiver_abs)
 print()
 print(f'Optical efficiency: {optical_efficiency*100:.2f}%')
 print(f'Field Efficiency (ppr): {field_efficiency*100:.2f}%')
+print(f'Power Produced: {field_efficiency * aperture * DNI * 0.001:.2f} kW')
+print(f'Field Footprint: {stg1_length * stg1_width:.2f} m^2')
+print(f'Field width: {stg1_width:.2f} m')
