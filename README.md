@@ -1,6 +1,6 @@
 # Raytracing With Soiling
 
-A library for analysing the effect of soiling on the effectiveness of a Linear Fresnel Reflector (LFR) plant by Oscar Djuric.
+A library for analysing the effect of soiling on the effectiveness of a Linear Fresnel Reflector (LFR) plant by Oscar Djuric. This is in partnership with the Faculty of Engineering at the Queensland University of Technology. 
 
 ## Summary
 This library provides simulations and tools to analyse the effect of the soiling models developed in the HelioSoil [1] repository on the effectiveness of a LFR plant simulated using PySolTrace by NREL [2]. The soiling model is well explained in the HelioSoil repository by following the submodule `HelioSoil @ 5211459` in this repository. 
