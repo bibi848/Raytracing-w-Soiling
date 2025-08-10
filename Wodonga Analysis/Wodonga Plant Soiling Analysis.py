@@ -198,6 +198,7 @@ incidence_angles_rad = np.zeros((num_heliostats, num_timesteps))
 elevation_angles_deg = [] # These are used to collect data, later placed into the csv file.
 azimuth_angles_deg = []
 transversal_angles = []
+
 for i,date in enumerate(Time_data):
     print(i)
     # Finding the position of the sun
@@ -216,10 +217,11 @@ for i,date in enumerate(Time_data):
         sn = sun_position[0:3]/np.linalg.norm(sun_position[0:3])
         theta_T = np.arctan(sn[0]/sn[2])
         transversal_angles.append(theta_T)
-
+        
         q = 0
         for p in range(num_heliostats):
-            if p != 0 and p != 1 and panels_per_module % p == 0:
+            # Chooses the correct index to select the right receiver position. 
+            if p != 0 and p != 1 and p % panels_per_module == 0:
                 q += 1
         
             receiver_position = [receiver_positions[q], 0, receiver_height]
@@ -243,6 +245,7 @@ print('All tilt calculations done')
 #%% 
 # Energy Demand
 # f = t time space, T = width, beta = flatness, peak = , f0 = time of peak
+num_timesteps = len(Time_data)
 def raised_cosine(f, T, beta, peak, f0):
     f = f - f0
     if np.abs(f) <= (1-beta)/(2*T):
@@ -266,7 +269,7 @@ total_power = baseline_power + power1 + power2 + random_variability
 # Plot
 plt.figure(figsize=(10, 5))
 plt.plot(t, total_power)
-plt.xlabel("Time of Day (hours)")
+plt.xlabel("Time [Hours]")
 plt.ylabel("Power (MWth)")
 plt.title("Simulated Power Demand")
 plt.xticks(np.arange(0, 25, 2))
@@ -287,11 +290,15 @@ while i < num_timesteps:
 
 t = list(range(288*1))
 
+t = np.linspace(0, 24, 288)
+
 plt.figure(figsize=(10, 5))
 plt.plot(t, energy_demand[:288*1])
 plt.xlabel("Time [Hours]")
 plt.ylabel("Energy [kWh]")
 plt.title("Simulated Energy Demand")
+plt.xticks(np.arange(0, 25, 2))
+plt.yticks(np.arange(0, 1600, 200))
 plt.grid()
 plt.show()
 
@@ -315,7 +322,7 @@ eles = pd.Series(elevation_angles_deg)
 max_elevation_indexes = list(eles.groupby(eles.index // 288).idxmax())
 
 #%%
-# Finding the equivalent cleanliness of each panel for each timestep
+# Calculating cleanlinesses...
 
 def h(phi):
     return 2/(np.cos(phi))
@@ -328,13 +335,14 @@ def calc_cleanliness(cumulative_soiled_area, incidence_angle_rad):
 # cumulative soiled area of all panels are reset to 0.
 cumulative_soiled_area = np.zeros_like(delta_soiled_area)
 panel_cleanliness = np.ones_like(delta_soiled_area)
-cleanliness_threshold = 0.8
+cleanliness_threshold = 0.9
 field_cleanliness = []
 
 for t in range(1, num_timesteps):
 
     for p in range(num_heliostats):
-        cumulative_soiled_area[p, t] = cumulative_soiled_area[p, t-1] + delta_soiled_area[p, t]
+        # cumulative_soiled_area[p, t] = cumulative_soiled_area[p, t-1] + delta_soiled_area[p, t]
+        cumulative_soiled_area[p, t] = 0
         panel_cleanliness[p, t] = calc_cleanliness(cumulative_soiled_area[p,t], incidence_angles_rad[p,t])
 
         if t in max_elevation_indexes:
@@ -378,7 +386,7 @@ plt.show()
 #%%
 # Appending data to a CSV
 
-filepath = wodonga_path + "\\Wodonga Data\\Wodonga Soiled Data.csv"
+filepath = wodonga_path + "\\Wodonga Data\\Wodonga Clean Data.csv"
 
 data = {
     "Date"            : Time_data,

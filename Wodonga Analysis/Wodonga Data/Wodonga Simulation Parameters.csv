@@ -3,13 +3,13 @@ Latitude,-36.12179
 Longitude,146.88809
 Timezone Offset [Hours],10
 Receiver Height [m],4.5
-Receiver Length [m],117.74
+Receiver Length [m],71.05
 Receiver Diameter [m],0.15
-Panel Length [m],117.74
+Panel Length [m],71.05
 Panel Width [m],0.5
 Panel Height [m],0.5
 Panel Spacing [m],0.2
-Number of Modules,2
+Number of Modules,4
 Panels per Module,11
 Slope Error [mrad],0.1
 Specularity Error [mrad],0.1

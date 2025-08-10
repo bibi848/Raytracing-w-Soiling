@@ -1750,7 +1750,7 @@ class PySolTrace:
         raynum = df.number.values[inds]
 
         # Generate the 3D scatter plot
-        layout = go.Layout(scene=dict(aspectmode='data'))
+        layout = go.Layout(scene=dict(aspectmode='data'), xaxis=dict(visible=False))
 
         if len(list(set(stage))) > 1:
             md = dict( size=0.75, color=stage, colorscale='jet', opacity=0.7, ) 

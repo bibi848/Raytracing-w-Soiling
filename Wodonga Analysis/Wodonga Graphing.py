@@ -169,7 +169,7 @@ for i in range(len(t_avg_peak)):
 
 # Finding the indexes of the first of each month
 month_indexes = []
-scale_factor = 5  # If simulated field is smaller than actual field required, this is the multiplication factor.
+scale_factor = 30  # If simulated field is smaller than actual field required, this is the multiplication factor.
 
 for i in range(num_timesteps):
     date_obj = datetime.fromisoformat(df_soiled_data["Date"][i])
@@ -258,17 +258,16 @@ plt.show()
 
 # Overlaying the average field cleanliness with the average optical and field efficiencies.
 fig, ax1 = plt.subplots(figsize=(12, 6))
-ax1.plot(t, avg_cleanliness, color="blue")
-ax1.set_xlabel("Time [Hours]")
-ax1.set_ylabel("Average Cleanliness", color="blue")
-ax1.set_title('Comparing the Average Field Cleanliness to the Average Optical and Field Efficiencies')
-ax1.tick_params(axis="y", labelcolor="blue")
+ax1.plot(t, avg_cleanliness, color="grey")
+ax1.set_xlabel("Time [Hours]", fontsize = 16)
+ax1.set_ylabel("Average Cleanliness", color="black", fontsize = 16)
+#ax1.set_title('Comparing the Average Field Cleanliness to the Average Optical and Field Efficiencies')
+ax1.tick_params(axis="y", labelcolor="black")
 ax2 = ax1.twinx()
-ax2.plot(t_avg_peak, o_efficiencies_avg, color="red", label="Optical")
-ax2.plot(t_avg_peak, f_efficiencies_avg, color="green", label="Field")
-ax2.set_ylabel("Daily Average Efficiency", color="black")
-ax2.tick_params(axis="y", labelcolor="black")
-ax2.legend(loc='lower right')
+#ax2.plot(t_avg_peak, o_efficiencies_avg, color="red", label="Optical")
+ax2.plot(t_avg_peak, f_efficiencies_avg, color="red")
+ax2.set_ylabel("Daily Average Efficiency", color="red", fontsize = 16)
+ax2.tick_params(axis="y", labelcolor="red")
 ax1.grid(True)
 plt.show()
 
@@ -309,7 +308,7 @@ fig, ax1 = plt.subplots(figsize=(12, 6))
 ax1.plot(t, DNI, color="blue")
 ax1.set_xlabel("Time [Hours]")
 ax1.set_ylabel("DNI [W/m2]", color="blue")
-ax1.set_title('Comparing the Average Field Cleanliness to the Average Optical and Field Efficiencies')
+ax1.set_title('DNI Variation')
 ax1.tick_params(axis="y", labelcolor="blue")
 ax1.grid(True)
 plt.show()
@@ -334,8 +333,6 @@ plt.show()
 fig, ax1 = plt.subplots(figsize=(12, 6))
 ax1.plot(t, energy_generated_clean, color= 'blue', label= 'Clean')
 ax1.plot(t, energy_generated, color = 'red', label = 'Soiled')
-ax1.axvline(8500, color = 'red', linestyle = ':', linewidth = 2)
-ax1.axvline(10500, color = 'red', linestyle = ':', linewidth = 2)
 ax1.set_xlabel("Time [Hours]")
 ax1.set_ylabel("Energy Generated [kWh]")
 ax1.set_title('Comparing the Clean and Dirty Energy Generations')
@@ -347,10 +344,38 @@ plt.show()
 # Energy Usage
 
 fig, ax1 = plt.subplots(figsize=(12, 6))
-ax1.plot(t, energy_demand, color= 'blue')
-ax1.plot(t, energy_generated, color= 'red')
-ax1.set_xlabel("Time [Hours]")
-ax1.set_ylabel("Energy [kWh]")
-ax1.set_title('Energy Production vs Energy Demand')
+ax1.plot(t, energy_demand, color= 'grey', label = 'Demand')
+ax1.plot(t, energy_generated_clean, color = 'blue', label = '"Clean" Supply')
+ax1.plot(t, energy_generated, color= 'red', label = '"Soiled" Supply')
+ax1.set_xlabel("Time [Hours]", fontsize = 16)
+ax1.set_ylabel("Energy [kWh]", fontsize = 16)
+# ax1.set_title('Energy Production vs Energy Demand')
+ax1.legend(fontsize = 12)
+ax1.set_ylim(500, 2300)
+ax1.grid(True)
+plt.show()
+
+# %%
+# Thermal Storage
+storage = []
+count = 0
+
+for i in range(len(energy_generated)):
+    count += energy_generated[i]
+    count -= energy_demand[i]
+    storage.append(count)
+
+fig, ax1 = plt.subplots(figsize=(12, 6))
+ax1.plot(t[:150], energy_generated[:150], color= 'red', label = 'Generated')
+ax1.plot(t[:150], energy_demand[:150], color= 'blue', label = 'Demand')
+
+ax2 = ax1.twinx()
+ax2.plot(t[:150], storage[:150], color= 'grey', label = 'Storage')
+
+ax1.set_xlabel("Time [Hours]", fontsize = 16)
+ax1.set_ylabel("", fontsize = 16)
+# ax1.set_title('Energy Production vs Energy Demand')
+ax1.legend(fontsize = 12)
+# ax1.set_ylim(500, 2300)
 ax1.grid(True)
 plt.show()

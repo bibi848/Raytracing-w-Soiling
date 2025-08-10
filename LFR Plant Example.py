@@ -40,7 +40,7 @@ lat, lon, hour_offset, receiver_height, receiver_length, receiver_diameter, pane
 # Date and Location
 # Location is Woomera and the date is set as 01/04/2018 at 11:00. This can be changed to any date.
 timezoneOffset = dt.timedelta(hours = hour_offset)
-date = datetime(2018, 4, 1, hour=11, minute=0, second=0, tzinfo=dt.timezone(timezoneOffset))
+date = datetime(2021, 5, 21, hour=11, minute=40, second=0, tzinfo=dt.timezone(timezoneOffset))
 location = Location(lat, lon, dt.timezone(timezoneOffset), 0)
 clear_sky = location.get_clearsky(pd.DatetimeIndex([date]), model = 'ineichen')
 DNI = 900 # clear_sky['dni'].values[0]
@@ -74,10 +74,10 @@ PT = PySolTrace()
 # Finding the position of the sun
 # All angle conventions are explained in Aiming Strategy for LFRs document. 
 elevation_deg = solar.get_altitude(lat,lon,date) 
-# azimuth_deg = solar.get_azimuth(lat,lon,date) 
-# zenith_deg = 90 - elevation_deg  
-azimuth_deg = 90 # Reference Condition for LF-11
-zenith_deg = 30  # Reference Condition for LF-11
+azimuth_deg = solar.get_azimuth(lat,lon,date) 
+zenith_deg = 90 - elevation_deg  
+# azimuth_deg = 90 # Reference Condition for LF-11
+# zenith_deg = 30  # Reference Condition for LF-11
 elevation_rad, azimuth_rad, zenith_rad = (np.deg2rad(x) for x in [elevation_deg, azimuth_deg, zenith_deg])
 
 # Describing the sun's position in terms of the azimuth and zenith. The full breakdown for this result is shown in
@@ -143,6 +143,7 @@ for i in range(len(receiver_positions)):
         # From the relative positions of the panel to the receiver, the panel's tilt and normal are calculated.
         theta_aim = calculate_theta_aim(Xaim=receiver_position[0], Zaim=receiver_position[2], X0=heliostat_position[0], Z0=heliostat_position[2])
         tilt = calculate_tilt(theta_T, theta_aim)
+        # print(tilt)
         panel_normal = calculate_panel_normal(tilt)
 
         el3 = stg3.add_element()
@@ -162,18 +163,23 @@ optics_receiver = op_receiver_surface(PT)
 optics_secondary = op_secondaryReflector_surface(PT, slope_error, specularity_error)
 
 for receiver_position in receiver_positions:
+    rp = receiver_position
     el4 = stg4.add_element()
     el4.optic = optics_receiver
     el4.surface_cylindrical(receiver_diameter/2)
     el4.aperture_singleax_curve(0, 0, receiver_length) # (inner coordinate of revolved section, outer coordinate of revolved section, 
                                                        # length of revolved section along axis of revolution)
+    if receiver_position > 0.01:
+        receiver_position += receiver_diameter/2
+    elif receiver_position < -0.01:
+        receiver_position -= receiver_diameter/2
 
     el4.position = Point(*[receiver_position, 0, receiver_height])
-    el41 = trapezoidal_secondary_reflector(stg4, optics_secondary, receiver_height, receiver_length, receiver_position)
+    el41 = trapezoidal_secondary_reflector(stg4, optics_secondary, receiver_height, receiver_length, rp)
    
 
 # Simulation Parameters
-PT.num_ray_hits = 1e5
+PT.num_ray_hits = 1e3
 PT.max_rays_traced = PT.num_ray_hits*100
 PT.is_sunshape = True
 PT.is_surface_errors = True
@@ -181,7 +187,7 @@ PT.dni= DNI
 
 # When ray data is extracted, the in-built multithreading cannot be used.
 PT.run(-1,False)
-PT.plot_trace()
+# PT.plot_trace()
 
 # Field Parameters
 df = PT.raydata  # Extracting the ray data from the simulation

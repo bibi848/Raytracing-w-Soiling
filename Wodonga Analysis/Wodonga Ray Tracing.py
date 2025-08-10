@@ -1,3 +1,4 @@
+#%%
 """
 This script implements the soiled results from the csv file Wodonga Soiled Data.csv generated from "Wodonga Plant Soiling Analysis.py" 
 into the raytracing simulation set up in LFR Plant Example.py. This allows the efficiency of the plant at each hour of the year to be 
@@ -29,7 +30,7 @@ from optical_geometrical_setup import op_receiver_surface
 from optical_geometrical_setup import op_secondaryReflector_surface
 from optical_geometrical_setup import trapezoidal_secondary_reflector
 
-csv_path = wodonga_path + "\\Wodonga Data\\Wodonga Soiled Data.csv"
+csv_path = wodonga_path + "\\Wodonga Data\\Wodonga Clean Data.csv"
 df = pd.read_csv(csv_path)
 
 # LFR Plant Setup 
@@ -40,7 +41,7 @@ receiver_height -= panel_height    # This height correction is done for proper a
 panel_height = 0                   # By bringing the panels to the ground, it removes the need for x and z shifts of the fictitious surface to aim on the field properly.
 stg1_length = panel_length 
 stg1_width = panel_width * num_heliostats + panel_spacing * (num_heliostats - 1) 
-distance_multiplier = 13 # Scaling factor which pushes the fictitious surface away from the solar field.
+distance_multiplier = 10 # Scaling factor which pushes the fictitious surface away from the solar field.
 
 panel_x_shift = panel_width + panel_spacing
 panel_positions = []
@@ -86,6 +87,7 @@ optical_efficiency = []
 peak_efficiency = []
 efficiency = []
 
+#%%
 # Main function which is called from the multiprocessing 'Pool', called below. 
 # This function is practically the same as the one from LFR Plant Example, where under a specific position of the sun, 
 # a raytracing simulation is performed to find the efficiency of the plant.
@@ -167,7 +169,6 @@ def ray_trace(i):
             el4.surface_cylindrical(receiver_diameter/2)
             el4.aperture_singleax_curve(0, 0, receiver_length) # (inner coordinate of revolved section, outer coordinate of revolved section, 
                                                                # length of revolved section along axis of revolution)
-
             el4.position = Point(*[receiver_position, 0, receiver_height])
             el41 = trapezoidal_secondary_reflector(stg4, optics_secondary, receiver_height, receiver_length, receiver_position)
 
@@ -218,7 +219,7 @@ if __name__ == "__main__":
     print('Time Taken:', end_multi - start_multi)
 
     # Appending the results to a csv
-    filepath = wodonga_path + '\\Wodonga Data\\Wodonga Raytrace Results.csv'
+    filepath = wodonga_path + '\\Wodonga Data\\Wodonga Raytrace Results - Clean.csv'
 
     optical_efficiency = []
     field_efficiency = []
