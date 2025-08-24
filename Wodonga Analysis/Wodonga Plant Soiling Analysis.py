@@ -278,17 +278,17 @@ plt.grid()
 plt.show()
 
 energy_demand = []
+power_demand = []
 i = 0
 u = 0
 while i < num_timesteps:
     energy_demand.append(total_power[u]*1000/12)
+    power_demand.append(total_power[u])
     u += 1
     i += 1
 
     if u == len(total_power):
         u = 0
-
-t = list(range(288*1))
 
 t = np.linspace(0, 24, 288)
 

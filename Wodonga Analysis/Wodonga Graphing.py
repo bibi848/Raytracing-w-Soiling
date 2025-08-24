@@ -355,27 +355,177 @@ ax1.set_ylim(500, 2300)
 ax1.grid(True)
 plt.show()
 
-# %%
-# Thermal Storage
-storage = []
-count = 0
+#%%
+tpow = np.linspace(0, 24*636, 288*636)
+energy_demand = energy_demand[:183168]
+energy_generated = energy_generated[:183168]
 
-for i in range(len(energy_generated)):
+indexlower = 50140
+indexhigher = indexlower+288*2-80
+
+plt.figure(figsize=(10, 5))
+plt.plot(tpow[indexlower: indexhigher], energy_demand[indexlower:indexhigher])
+plt.plot(tpow[indexlower: indexhigher], energy_generated[indexlower:indexhigher])
+plt.xlabel("Time [Hours]")
+plt.ylabel("Energy [kWh]")
+plt.title("Simulated Energy Demand")
+plt.grid()
+plt.show()
+
+#%%
+# Thermal Storage During Summer
+indexlower = 51030 
+indexhigher = indexlower + 288*2-80
+
+storage = []
+count = 2000
+
+for i in range(indexlower, indexhigher):
     count += energy_generated[i]
     count -= energy_demand[i]
     storage.append(count)
 
 fig, ax1 = plt.subplots(figsize=(12, 6))
-ax1.plot(t[:150], energy_generated[:150], color= 'red', label = 'Generated')
-ax1.plot(t[:150], energy_demand[:150], color= 'blue', label = 'Demand')
+line1, = ax1.plot(tpow[indexlower:indexhigher], energy_generated[indexlower:indexhigher], color='red', label='Generated')
+line2, = ax1.plot(tpow[indexlower:indexhigher], energy_demand[indexlower:indexhigher], color='blue', label='Demand')
 
 ax2 = ax1.twinx()
-ax2.plot(t[:150], storage[:150], color= 'grey', label = 'Storage')
+line3, = ax2.plot(tpow[indexlower:indexhigher], storage, color='green', label='Storage')
 
-ax1.set_xlabel("Time [Hours]", fontsize = 16)
-ax1.set_ylabel("", fontsize = 16)
-# ax1.set_title('Energy Production vs Energy Demand')
-ax1.legend(fontsize = 12)
-# ax1.set_ylim(500, 2300)
+ax1.set_xlabel("Time [Hours]", fontsize=16)
+ax1.set_ylabel("Energy [kWh]", fontsize=16)
+ax1.set_title('Thermal Storage in Summer Days')
+
+lines = [line1, line2, line3]
+labels = [l.get_label() for l in lines]
+ax1.legend(lines, labels, fontsize=12, loc="best")
+
 ax1.grid(True)
 plt.show()
+
+
+#%%
+# With Supplementary Heater
+
+indexlower = 37000 # summer months
+indexhigher = 90000
+
+storage = []
+count = 2000
+
+UPS = []
+UPScount = 0
+
+for i in range(indexlower, indexhigher):
+    count += energy_generated[i]
+    count -= energy_demand[i]
+
+    if count < 0:
+        UPScount = -1*count
+        count = 0
+
+    storage.append(count)
+    UPS.append(UPScount)
+
+fig, ax1 = plt.subplots(figsize=(12, 6))
+line1, = ax1.plot(tpow[indexlower:indexhigher], energy_generated[indexlower:indexhigher], color='red', label='Generated')
+line2, = ax1.plot(tpow[indexlower:indexhigher], energy_demand[indexlower:indexhigher], color='blue', label='Demand')
+
+ax2 = ax1.twinx()
+line3, = ax2.plot(tpow[indexlower:indexhigher], storage, color='green', label='Storage')
+line4, = ax2.plot(tpow[indexlower:indexhigher], UPS, color='black', label='Supplementary')
+
+ax1.set_xlabel("Time [Hours]", fontsize=16)
+ax1.set_ylabel("Energy [kWh]", fontsize=16)
+ax1.set_title('Thermal Storage in Summer')
+
+lines = [line1, line2, line3, line4]
+labels = [l.get_label() for l in lines]
+ax1.legend(lines, labels, fontsize=12, loc="best")
+
+ax1.grid(True)
+plt.show()
+
+#%%
+
+indexlower = 51030 
+indexhigher = indexlower + 288*2-80
+
+storage = []
+count = 2000
+
+UPS = []
+UPScount = 0
+
+for i in range(indexlower, indexhigher):
+    count += energy_generated[i]
+    count -= energy_demand[i]
+
+    if count < 0:
+        UPScount = -1*count
+        count = 0
+
+    storage.append(count)
+    UPS.append(UPScount)
+
+fig, ax1 = plt.subplots(figsize=(12, 6))
+line1, = ax1.plot(tpow[indexlower:indexhigher], energy_generated[indexlower:indexhigher], color='red', label='Generated')
+line2, = ax1.plot(tpow[indexlower:indexhigher], energy_demand[indexlower:indexhigher], color='blue', label='Demand')
+
+ax2 = ax1.twinx()
+line3, = ax2.plot(tpow[indexlower:indexhigher], storage, color='green', label='Storage')
+line4, = ax2.plot(tpow[indexlower:indexhigher], UPS, color='black', label='Supplementary')
+
+ax1.set_xlabel("Time [Hours]", fontsize=16)
+ax1.set_ylabel("Energy [kWh]", fontsize=16)
+ax1.set_title('Thermal Storage in Summer')
+
+lines = [line1, line2, line3, line4]
+labels = [l.get_label() for l in lines]
+ax1.legend(lines, labels, fontsize=12, loc="best")
+
+ax1.grid(True)
+plt.show()
+
+#%%
+indexlower = 0 
+indexhigher = 100000
+
+storage = []
+count = 2000
+
+UPS = []
+UPScount = 0
+
+for i in range(indexlower, indexhigher):
+    count += energy_generated[i]
+    count -= energy_demand[i]
+
+    if count < 0:
+        UPScount = -1*count
+        count = 0
+
+    storage.append(count)
+    UPS.append(UPScount)
+
+fig, ax1 = plt.subplots(figsize=(12, 6))
+line2, = ax1.plot(tpow[indexlower:indexhigher], energy_demand[indexlower:indexhigher], color='blue', label='Demand')
+line1, = ax1.plot(tpow[indexlower:indexhigher], energy_generated[indexlower:indexhigher], color='red', label='Generated')
+
+ax2 = ax1.twinx()
+line3, = ax2.plot(tpow[indexlower:indexhigher], storage, color='green', label='Storage')
+line4, = ax2.plot(tpow[indexlower:indexhigher], UPS, color='black', label='Supplementary')
+
+ax1.set_xlabel("Time [Hours]", fontsize=16)
+ax1.set_ylabel("Energy [kWh]", fontsize=16)
+ax1.set_title('Thermal Storage Across 1 Year')
+
+lines = [line1, line2, line3, line4]
+labels = [l.get_label() for l in lines]
+ax1.legend(lines, labels, fontsize=12, loc="best")
+
+ax1.grid(True)
+plt.show()
+
+print(sum(UPS)/1000000)
+print(sum(storage)/1000000)
