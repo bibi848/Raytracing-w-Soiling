@@ -259,10 +259,10 @@ def raised_cosine(f, T, beta, peak, f0):
 
 t = np.linspace(0, 24, 288)
 
-baseline_power = 3
-random_variability = np.random.normal(0, 0.6, len(t))
-power1 = np.array([raised_cosine(ts, T=0.16, beta=0.3, peak=14, f0=8.5) for ts in t])
-power2 = np.array([raised_cosine(ts, T=0.2, beta=0.3, peak=13.5, f0=15) for ts in t])
+baseline_power = 0.5
+random_variability = np.random.normal(0, 0.2, len(t))
+power1 = np.array([raised_cosine(ts, T=0.16, beta=0.3, peak=16.6, f0=8.5) for ts in t])
+power2 = np.array([raised_cosine(ts, T=0.2, beta=0.3, peak=16.4, f0=15) for ts in t])
 
 total_power = baseline_power + power1 + power2 + random_variability
 
@@ -270,7 +270,7 @@ total_power = baseline_power + power1 + power2 + random_variability
 plt.figure(figsize=(10, 5))
 plt.plot(t, total_power)
 plt.xlabel("Time [Hours]")
-plt.ylabel("Power (MWth)")
+plt.ylabel("Power [MWth]")
 plt.title("Simulated Power Demand")
 plt.xticks(np.arange(0, 25, 2))
 plt.yticks(np.arange(1, 20, 2))
@@ -301,6 +301,9 @@ plt.xticks(np.arange(0, 25, 2))
 plt.yticks(np.arange(0, 1600, 200))
 plt.grid()
 plt.show()
+
+df = pd.DataFrame({"col1": energy_demand, "col2": power_demand})
+df.to_csv("Power & Energy Demand.csv", index=False, header=False)
 
 #%%
 # Inputting the calculated tilt angles to the physical model

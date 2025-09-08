@@ -28,6 +28,8 @@ csv_path = os.path.join(current_directory, "Wodonga Analysis\\Wodonga Data\\Wodo
 df_raytrace_results = pd.read_csv(csv_path)
 csv_path = os.path.join(current_directory, "Wodonga Analysis\\Wodonga Data\\Wodonga Raytrace Results - Clean.csv")
 df_raytrace_results_clean = pd.read_csv(csv_path)
+csv_path = os.path.join(current_directory, "Wodonga Analysis\\Wodonga Data\\Power & Energy Demand.csv")
+df_energy_demand = pd.read_csv(csv_path).iloc[:, 0]
 
 # Extracting the data from the csv file created in Wodonga Plant Soiling Analysis.py
 azimuths_deg   = df_soiled_data['Azimuth [deg]'].to_numpy()
@@ -37,7 +39,7 @@ elevations_rad = np.deg2rad(elevations_deg)
 num_timesteps  = len(df_soiled_data['Date'].to_numpy())
 DNI_day_sums   = df_soiled_data["DNI Sum Per Day"].to_numpy()
 DNI_all        = df_soiled_data["DNI [W/m2]"].to_numpy()
-energy_demand  = df_soiled_data["Energy Demand [kWh]"].to_numpy()
+energy_demand  = df_energy_demand.to_numpy()
 
 csv_path = current_directory + "\\Wodonga Analysis\\Wodonga Data\\Wodonga Simulation Parameters.csv"
 lat, lon, hour_offset, receiver_height, receiver_length, receiver_diameter, panel_length, panel_width, panel_height, panel_spacing, number_of_modules, panels_per_module, slope_error, specularity_error = import_simulation_parameters(pd.read_csv(csv_path))
@@ -356,6 +358,7 @@ ax1.grid(True)
 plt.show()
 
 #%%
+# Demand vs Generated Energy over two summer days
 tpow = np.linspace(0, 24*636, 288*636)
 energy_demand = energy_demand[:183168]
 energy_generated = energy_generated[:183168]
@@ -364,25 +367,28 @@ indexlower = 50140
 indexhigher = indexlower+288*2-80
 
 plt.figure(figsize=(10, 5))
-plt.plot(tpow[indexlower: indexhigher], energy_demand[indexlower:indexhigher])
-plt.plot(tpow[indexlower: indexhigher], energy_generated[indexlower:indexhigher])
+plt.plot(tpow[indexlower: indexhigher], energy_demand[indexlower:indexhigher], color='blue', label='Demand')
+plt.plot(tpow[indexlower: indexhigher], energy_generated[indexlower:indexhigher], color='red', label='Generated')
 plt.xlabel("Time [Hours]")
 plt.ylabel("Energy [kWh]")
 plt.title("Simulated Energy Demand")
+plt.legend()
 plt.grid()
 plt.show()
 
 #%%
-# Thermal Storage During Summer
+# Thermal Storage During Summer Days
 indexlower = 51030 
-indexhigher = indexlower + 288*2-80
+indexhigher = indexlower + 288*3-80
 
 storage = []
-count = 2000
+count = 30000
 
 for i in range(indexlower, indexhigher):
     count += energy_generated[i]
     count -= energy_demand[i]
+    if count > 60000:
+        count = 60000
     storage.append(count)
 
 fig, ax1 = plt.subplots(figsize=(12, 6))
@@ -394,6 +400,7 @@ line3, = ax2.plot(tpow[indexlower:indexhigher], storage, color='green', label='S
 
 ax1.set_xlabel("Time [Hours]", fontsize=16)
 ax1.set_ylabel("Energy [kWh]", fontsize=16)
+ax2.set_ylabel("Thermal Energy Storage [kWh]", fontsize=16)
 ax1.set_title('Thermal Storage in Summer Days')
 
 lines = [line1, line2, line3]
@@ -411,7 +418,7 @@ indexlower = 37000 # summer months
 indexhigher = 90000
 
 storage = []
-count = 2000
+count = 30000
 
 UPS = []
 UPScount = 0
@@ -423,6 +430,8 @@ for i in range(indexlower, indexhigher):
     if count < 0:
         UPScount = -1*count
         count = 0
+    elif count > 60000:
+        count = 60000
 
     storage.append(count)
     UPS.append(UPScount)
@@ -437,6 +446,7 @@ line4, = ax2.plot(tpow[indexlower:indexhigher], UPS, color='black', label='Suppl
 
 ax1.set_xlabel("Time [Hours]", fontsize=16)
 ax1.set_ylabel("Energy [kWh]", fontsize=16)
+ax2.set_ylabel("Thermal Energy Storage [kWh]", fontsize=16)
 ax1.set_title('Thermal Storage in Summer')
 
 lines = [line1, line2, line3, line4]
@@ -464,6 +474,8 @@ for i in range(indexlower, indexhigher):
     if count < 0:
         UPScount = -1*count
         count = 0
+    elif count > 60000:
+        count = 60000
 
     storage.append(count)
     UPS.append(UPScount)
@@ -478,6 +490,7 @@ line4, = ax2.plot(tpow[indexlower:indexhigher], UPS, color='black', label='Suppl
 
 ax1.set_xlabel("Time [Hours]", fontsize=16)
 ax1.set_ylabel("Energy [kWh]", fontsize=16)
+ax2.set_ylabel("Thermal Energy Storage [kWh]", fontsize=16)
 ax1.set_title('Thermal Storage in Summer')
 
 lines = [line1, line2, line3, line4]
@@ -504,6 +517,8 @@ for i in range(indexlower, indexhigher):
     if count < 0:
         UPScount = -1*count
         count = 0
+    elif count > 60000:
+        count = 60000
 
     storage.append(count)
     UPS.append(UPScount)
@@ -518,6 +533,7 @@ line4, = ax2.plot(tpow[indexlower:indexhigher], UPS, color='black', label='Suppl
 
 ax1.set_xlabel("Time [Hours]", fontsize=16)
 ax1.set_ylabel("Energy [kWh]", fontsize=16)
+ax2.set_ylabel("Thermal Energy Storage [kWh]", fontsize=16)
 ax1.set_title('Thermal Storage Across 1 Year')
 
 lines = [line1, line2, line3, line4]

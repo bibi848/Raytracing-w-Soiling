@@ -74,10 +74,10 @@ PT = PySolTrace()
 # Finding the position of the sun
 # All angle conventions are explained in Aiming Strategy for LFRs document. 
 elevation_deg = solar.get_altitude(lat,lon,date) 
-azimuth_deg = solar.get_azimuth(lat,lon,date) 
-zenith_deg = 90 - elevation_deg  
-# azimuth_deg = 90 # Reference Condition for LF-11
-# zenith_deg = 30  # Reference Condition for LF-11
+# azimuth_deg = solar.get_azimuth(lat,lon,date) 
+# zenith_deg = 90 - elevation_deg  
+azimuth_deg = 90 # Reference Condition for LF-11
+zenith_deg = 30  # Reference Condition for LF-11
 elevation_rad, azimuth_rad, zenith_rad = (np.deg2rad(x) for x in [elevation_deg, azimuth_deg, zenith_deg])
 
 # Describing the sun's position in terms of the azimuth and zenith. The full breakdown for this result is shown in
@@ -179,7 +179,7 @@ for receiver_position in receiver_positions:
    
 
 # Simulation Parameters
-PT.num_ray_hits = 1e3
+PT.num_ray_hits = 1e5
 PT.max_rays_traced = PT.num_ray_hits*100
 PT.is_sunshape = True
 PT.is_surface_errors = True
@@ -187,7 +187,7 @@ PT.dni= DNI
 
 # When ray data is extracted, the in-built multithreading cannot be used.
 PT.run(-1,False)
-# PT.plot_trace()
+PT.plot_trace()
 
 # Field Parameters
 df = PT.raydata  # Extracting the ray data from the simulation
